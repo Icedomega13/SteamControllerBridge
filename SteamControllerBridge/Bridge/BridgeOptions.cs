@@ -75,6 +75,11 @@ internal sealed class BridgeOptions
         return KeyboardKeys.TryGetValue(input.ToString(), out var key) ? key : 0;
     }
 
+    public bool HasKeyboardKey(ControllerInput input)
+    {
+        return GetKeyboardKey(input) > 0;
+    }
+
     public void SetKeyboardKey(ControllerInput input, int key)
     {
         if (key <= 0)

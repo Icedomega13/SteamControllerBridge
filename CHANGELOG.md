@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2
+
+- Suppressed matching virtual Xbox button or trigger output when that controller input is mapped to a keyboard key.
+
 ## 0.5.1
 
 - Switched keyboard mapping output to scan-code based input for better compatibility with apps and games.

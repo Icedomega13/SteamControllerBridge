@@ -33,8 +33,8 @@ internal sealed class XboxVirtualController : IDisposable
         var buttons = BuildButtons(input, options);
 
         _controller.SetButtonsFull(buttons);
-        _controller.SetSliderValue(Xbox360Slider.LeftTrigger, BuildTriggerValue(input.LeftTrigger, options.LeftTriggerTurbo, options));
-        _controller.SetSliderValue(Xbox360Slider.RightTrigger, BuildTriggerValue(input.RightTrigger, options.RightTriggerTurbo, options));
+        _controller.SetSliderValue(Xbox360Slider.LeftTrigger, BuildTriggerValue(input.LeftTrigger, ControllerInput.LeftTrigger, options.LeftTriggerTurbo, options));
+        _controller.SetSliderValue(Xbox360Slider.RightTrigger, BuildTriggerValue(input.RightTrigger, ControllerInput.RightTrigger, options.RightTriggerTurbo, options));
         _controller.SetAxisValue(Xbox360Axis.LeftThumbX, ReadInt16(input.Report, 10));
         _controller.SetAxisValue(Xbox360Axis.LeftThumbY, ReadInt16(input.Report, 12));
         var rightX = ReadInt16(input.Report, 14);
@@ -118,31 +118,31 @@ internal sealed class XboxVirtualController : IDisposable
     private static ushort BuildButtons(SteamControllerInput input, BridgeOptions options)
     {
         ushort buttons = 0;
-        AddMappedButton(ref buttons, input.A, options.GetBinding(PhysicalButton.A), options);
-        AddMappedButton(ref buttons, input.B, options.GetBinding(PhysicalButton.B), options);
-        AddMappedButton(ref buttons, input.X, options.GetBinding(PhysicalButton.X), options);
-        AddMappedButton(ref buttons, input.Y, options.GetBinding(PhysicalButton.Y), options);
-        AddMappedButton(ref buttons, input.LeftShoulder, options.GetBinding(PhysicalButton.LeftShoulder), options);
-        AddMappedButton(ref buttons, input.RightShoulder, options.GetBinding(PhysicalButton.RightShoulder), options);
-        AddMappedButton(ref buttons, input.LeftThumb, options.GetBinding(PhysicalButton.LeftThumb), options);
-        AddMappedButton(ref buttons, input.RightThumb, options.GetBinding(PhysicalButton.RightThumb), options);
-        AddMappedButton(ref buttons, input.Back, options.GetBinding(PhysicalButton.Back), options);
-        AddMappedButton(ref buttons, input.Start, options.GetBinding(PhysicalButton.Start), options);
-        AddMappedButton(ref buttons, input.Guide, options.GetBinding(PhysicalButton.Guide), options);
-        AddMappedButton(ref buttons, input.DPadUp, options.GetBinding(PhysicalButton.DPadUp), options);
-        AddMappedButton(ref buttons, input.DPadDown, options.GetBinding(PhysicalButton.DPadDown), options);
-        AddMappedButton(ref buttons, input.DPadLeft, options.GetBinding(PhysicalButton.DPadLeft), options);
-        AddMappedButton(ref buttons, input.DPadRight, options.GetBinding(PhysicalButton.DPadRight), options);
-        AddMappedButton(ref buttons, input.L4, options.GetBinding(PhysicalButton.L4), options);
-        AddMappedButton(ref buttons, input.L5, options.GetBinding(PhysicalButton.L5), options);
-        AddMappedButton(ref buttons, input.R4, options.GetBinding(PhysicalButton.R4), options);
-        AddMappedButton(ref buttons, input.R5, options.GetBinding(PhysicalButton.R5), options);
+        AddMappedButton(ref buttons, input.A, ControllerInput.A, options.GetBinding(PhysicalButton.A), options);
+        AddMappedButton(ref buttons, input.B, ControllerInput.B, options.GetBinding(PhysicalButton.B), options);
+        AddMappedButton(ref buttons, input.X, ControllerInput.X, options.GetBinding(PhysicalButton.X), options);
+        AddMappedButton(ref buttons, input.Y, ControllerInput.Y, options.GetBinding(PhysicalButton.Y), options);
+        AddMappedButton(ref buttons, input.LeftShoulder, ControllerInput.LeftShoulder, options.GetBinding(PhysicalButton.LeftShoulder), options);
+        AddMappedButton(ref buttons, input.RightShoulder, ControllerInput.RightShoulder, options.GetBinding(PhysicalButton.RightShoulder), options);
+        AddMappedButton(ref buttons, input.LeftThumb, ControllerInput.LeftThumb, options.GetBinding(PhysicalButton.LeftThumb), options);
+        AddMappedButton(ref buttons, input.RightThumb, ControllerInput.RightThumb, options.GetBinding(PhysicalButton.RightThumb), options);
+        AddMappedButton(ref buttons, input.Back, ControllerInput.Back, options.GetBinding(PhysicalButton.Back), options);
+        AddMappedButton(ref buttons, input.Start, ControllerInput.Start, options.GetBinding(PhysicalButton.Start), options);
+        AddMappedButton(ref buttons, input.Guide, ControllerInput.Guide, options.GetBinding(PhysicalButton.Guide), options);
+        AddMappedButton(ref buttons, input.DPadUp, ControllerInput.DPadUp, options.GetBinding(PhysicalButton.DPadUp), options);
+        AddMappedButton(ref buttons, input.DPadDown, ControllerInput.DPadDown, options.GetBinding(PhysicalButton.DPadDown), options);
+        AddMappedButton(ref buttons, input.DPadLeft, ControllerInput.DPadLeft, options.GetBinding(PhysicalButton.DPadLeft), options);
+        AddMappedButton(ref buttons, input.DPadRight, ControllerInput.DPadRight, options.GetBinding(PhysicalButton.DPadRight), options);
+        AddMappedButton(ref buttons, input.L4, ControllerInput.L4, options.GetBinding(PhysicalButton.L4), options);
+        AddMappedButton(ref buttons, input.L5, ControllerInput.L5, options.GetBinding(PhysicalButton.L5), options);
+        AddMappedButton(ref buttons, input.R4, ControllerInput.R4, options.GetBinding(PhysicalButton.R4), options);
+        AddMappedButton(ref buttons, input.R5, ControllerInput.R5, options.GetBinding(PhysicalButton.R5), options);
         return buttons;
     }
 
-    private static void AddMappedButton(ref ushort buttons, bool pressed, ButtonBinding binding, BridgeOptions options)
+    private static void AddMappedButton(ref ushort buttons, bool pressed, ControllerInput input, ButtonBinding binding, BridgeOptions options)
     {
-        if (!pressed || binding.Turbo && !IsTurboPulseOn(options) || TryMapButton(binding.Output) is not { } button)
+        if (options.HasKeyboardKey(input) || !pressed || binding.Turbo && !IsTurboPulseOn(options) || TryMapButton(binding.Output) is not { } button)
         {
             return;
         }
@@ -150,9 +150,9 @@ internal sealed class XboxVirtualController : IDisposable
         buttons |= button.Value;
     }
 
-    private static byte BuildTriggerValue(byte value, bool turbo, BridgeOptions options)
+    private static byte BuildTriggerValue(byte value, ControllerInput input, bool turbo, BridgeOptions options)
     {
-        if (value == 0)
+        if (options.HasKeyboardKey(input) || value == 0)
         {
             return 0;
         }
