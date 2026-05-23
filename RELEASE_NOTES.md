@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.1.2
+# Steam Controller Bridge v0.1.3
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -13,6 +13,10 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes simple gyro-to-mouse mode with selectable activation.
 - Includes optional rumble passthrough and a rumble toggle.
 - Includes dark mode and diagnostic logging.
+
+## Fixes in 0.1.3
+
+- Gyro activation dropdown changes now apply immediately instead of staying on the previous activation mode.
 
 ## Requirements
 

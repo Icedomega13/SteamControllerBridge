@@ -163,6 +163,7 @@ internal sealed class MainForm : Form
         ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
         _gyroActivationCombo.Width = 115;
         _gyroActivationCombo.Margin = new Padding(0, 0, 18, 0);
+        _gyroActivationCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
 
         _darkModeCheck.Text = "Dark mode";
         _darkModeCheck.AutoSize = true;
