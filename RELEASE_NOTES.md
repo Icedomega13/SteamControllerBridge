@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.2.0
+# Steam Controller Bridge v0.3.0
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -10,19 +10,20 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Disables lizard mode while enabled and restores it on shutdown.
 - Includes full button remapping for standard gamepad buttons and back paddles.
 - Includes per-button turbo toggles for rapid-fire style presses.
+- Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, and Desktop Mouse.
 - Includes optional trackpad-as-mouse mode.
-- Includes simple gyro-to-mouse mode with selectable activation.
+- Includes simple gyro mode with mouse or virtual right-stick output.
 - Includes optional rumble passthrough and a rumble toggle.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes dark mode and diagnostic logging.
 
-## Changes in 0.2.0
+## Changes in 0.3.0
 
-- Added advanced remapping for ABXY, bumpers, stick clicks, View/Menu, Steam/Guide, D-pad, and L4/L5/R4/R5.
-- Added a Turbo checkbox next to each remappable button.
-- Added Start with Windows.
-- Added automatic backoff when Steam opens, with reconnect attempts after Steam closes or a controller reconnects.
-- Kept default behavior simple: standard buttons map normally, while L4=Y, L5=X, R4=B, and R5=A.
+- Added one-click remap presets.
+- Added a Nintendo swap preset for A/B and X/Y style emulator layouts.
+- Added FPS gyro mouse and FPS gyro right-stick presets.
+- Added Desktop Mouse preset.
+- Added gyro output mode so gyro can move either the mouse or the virtual Xbox right stick.
 
 ## Requirements
 
@@ -41,7 +42,7 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 ## Known Limitations
 
 - ViGEmBus is retired and is used here as a practical MVP backend.
-- Native Switch/DSU motion output is not implemented yet; gyro currently maps to mouse.
+- Native Switch/DSU motion output is not implemented yet; gyro currently maps to mouse or virtual right-stick movement.
 - Trackpad-as-stick is not implemented yet.
 - HidHide duplicate-device handling is not integrated yet.
 - Remapping is currently global rather than per-game.
@@ -49,5 +50,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.2.0.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.2.0.zip`
+- `SteamControllerBridgeSetup-0.3.0.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.3.0.zip`

@@ -30,6 +30,7 @@ internal sealed class BridgeOptions
     public bool TrackpadClickEnabled { get; set; } = true;
     public bool GyroMouseEnabled { get; set; }
     public GyroMouseActivation GyroMouseActivation { get; set; } = GyroMouseActivation.LeftTrigger;
+    public GyroOutputMode GyroOutputMode { get; set; } = GyroOutputMode.Mouse;
     public bool RumbleEnabled { get; set; } = true;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
@@ -106,6 +107,71 @@ internal sealed class BridgeOptions
             _ => GamepadButton.Disabled
         };
     }
+
+    public void ApplyPreset(RemapPreset preset)
+    {
+        ResetButtonBindings();
+        TrackpadMouseEnabled = false;
+        GyroMouseEnabled = false;
+        GyroOutputMode = GyroOutputMode.Mouse;
+        GyroMouseActivation = GyroMouseActivation.LeftTrigger;
+
+        switch (preset)
+        {
+            case RemapPreset.NintendoSwap:
+                MapA.Output = GamepadButton.B;
+                MapB.Output = GamepadButton.A;
+                MapX.Output = GamepadButton.Y;
+                MapY.Output = GamepadButton.X;
+                break;
+            case RemapPreset.FpsGyroMouse:
+                GyroMouseEnabled = true;
+                GyroOutputMode = GyroOutputMode.Mouse;
+                GyroMouseActivation = GyroMouseActivation.LeftTrigger;
+                break;
+            case RemapPreset.FpsGyroStick:
+                GyroMouseEnabled = true;
+                GyroOutputMode = GyroOutputMode.RightStick;
+                GyroMouseActivation = GyroMouseActivation.LeftTrigger;
+                break;
+            case RemapPreset.DesktopMouse:
+                TrackpadMouseEnabled = true;
+                TrackpadMouseSource = TrackpadMouseSource.Right;
+                GyroMouseEnabled = true;
+                GyroOutputMode = GyroOutputMode.Mouse;
+                GyroMouseActivation = GyroMouseActivation.RightPadTouch;
+                break;
+        }
+    }
+
+    private void ResetButtonBindings()
+    {
+        SetBinding(MapA, GamepadButton.A);
+        SetBinding(MapB, GamepadButton.B);
+        SetBinding(MapX, GamepadButton.X);
+        SetBinding(MapY, GamepadButton.Y);
+        SetBinding(MapLeftShoulder, GamepadButton.LeftShoulder);
+        SetBinding(MapRightShoulder, GamepadButton.RightShoulder);
+        SetBinding(MapLeftThumb, GamepadButton.LeftThumb);
+        SetBinding(MapRightThumb, GamepadButton.RightThumb);
+        SetBinding(MapBack, GamepadButton.Back);
+        SetBinding(MapStart, GamepadButton.Start);
+        SetBinding(MapGuide, GamepadButton.Guide);
+        SetBinding(MapDPadUp, GamepadButton.DPadUp);
+        SetBinding(MapDPadDown, GamepadButton.DPadDown);
+        SetBinding(MapDPadLeft, GamepadButton.DPadLeft);
+        SetBinding(MapDPadRight, GamepadButton.DPadRight);
+        SetBinding(MapL4, GamepadButton.Y);
+        SetBinding(MapL5, GamepadButton.X);
+        SetBinding(MapR4, GamepadButton.B);
+        SetBinding(MapR5, GamepadButton.A);
+    }
+
+    private static void SetBinding(ButtonBinding binding, GamepadButton output)
+    {
+        binding.Output = output;
+        binding.Turbo = false;
+    }
 }
 
 internal sealed class ButtonBinding
@@ -166,6 +232,15 @@ internal enum GamepadButton
     DPadRight
 }
 
+internal enum RemapPreset
+{
+    DefaultXbox,
+    NintendoSwap,
+    FpsGyroMouse,
+    FpsGyroStick,
+    DesktopMouse
+}
+
 internal enum PaddleMapping
 {
     Disabled,
@@ -199,4 +274,10 @@ internal enum GyroMouseActivation
     LeftPadTouch,
     RightPadTouch,
     Always
+}
+
+internal enum GyroOutputMode
+{
+    Mouse,
+    RightStick
 }

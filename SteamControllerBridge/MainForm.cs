@@ -16,8 +16,11 @@ internal sealed class MainForm : Form
     private readonly Panel _advancedPanel = new();
     private readonly Dictionary<PhysicalButton, ComboBox> _buttonMapCombos = new();
     private readonly Dictionary<PhysicalButton, CheckBox> _turboChecks = new();
+    private readonly ComboBox _presetCombo = new();
+    private readonly Button _applyPresetButton = new();
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly ComboBox _gyroActivationCombo = new();
+    private readonly ComboBox _gyroOutputCombo = new();
     private readonly CheckBox _trackpadMouseCheck = new();
     private readonly CheckBox _trackpadClickCheck = new();
     private readonly CheckBox _gyroMouseCheck = new();
@@ -160,7 +163,7 @@ internal sealed class MainForm : Form
         _rumbleCheck.Margin = new Padding(0, 0, 18, 0);
         _rumbleCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
 
-        _gyroMouseCheck.Text = "Gyro mouse";
+        _gyroMouseCheck.Text = "Gyro aim";
         _gyroMouseCheck.AutoSize = true;
         _gyroMouseCheck.Margin = new Padding(0, 0, 18, 0);
         _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
@@ -207,7 +210,7 @@ internal sealed class MainForm : Form
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
-            RowCount = 30,
+            RowCount = 33,
             ColumnCount = 3
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -219,8 +222,16 @@ internal sealed class MainForm : Form
         }
 
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
+        ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
+        ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
 
         var optionRow = 0;
+        AddSectionLabel(layout, optionRow++, "Presets");
+        AddOptionRow(layout, optionRow, "Preset", _presetCombo);
+        _applyPresetButton.Text = "Apply";
+        _applyPresetButton.AutoSize = true;
+        _applyPresetButton.Click += (_, _) => ApplySelectedPreset();
+        layout.Controls.Add(_applyPresetButton, 2, optionRow++);
         AddSectionLabel(layout, optionRow++, "Button remapping");
         AddBindingRow(layout, optionRow++, "A", PhysicalButton.A);
         AddBindingRow(layout, optionRow++, "B", PhysicalButton.B);
@@ -241,7 +252,8 @@ internal sealed class MainForm : Form
         AddBindingRow(layout, optionRow++, "L5", PhysicalButton.L5);
         AddBindingRow(layout, optionRow++, "R4", PhysicalButton.R4);
         AddBindingRow(layout, optionRow++, "R5", PhysicalButton.R5);
-        AddSectionLabel(layout, optionRow++, "Mouse and app");
+        AddSectionLabel(layout, optionRow++, "Gyro, mouse, and app");
+        AddOptionRow(layout, optionRow++, "Gyro output", _gyroOutputCombo);
         AddOptionRow(layout, optionRow++, "Mouse pad", _trackpadSourceCombo);
 
         _trackpadMouseCheck.Text = "Use trackpad as mouse";
@@ -385,6 +397,8 @@ internal sealed class MainForm : Form
         }
 
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
+        _presetCombo.SelectedItem = RemapPreset.DefaultXbox;
+        _gyroOutputCombo.SelectedItem = _bridge.Options.GyroOutputMode;
         _gyroActivationCombo.SelectedItem = _bridge.Options.GyroMouseActivation;
         _trackpadMouseCheck.Checked = _bridge.Options.TrackpadMouseEnabled;
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
@@ -413,6 +427,7 @@ internal sealed class MainForm : Form
         }
 
         _bridge.Options.TrackpadMouseSource = (TrackpadMouseSource)(_trackpadSourceCombo.SelectedItem ?? _bridge.Options.TrackpadMouseSource);
+        _bridge.Options.GyroOutputMode = (GyroOutputMode)(_gyroOutputCombo.SelectedItem ?? _bridge.Options.GyroOutputMode);
         _bridge.Options.GyroMouseActivation = (GyroMouseActivation)(_gyroActivationCombo.SelectedItem ?? _bridge.Options.GyroMouseActivation);
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;
@@ -423,6 +438,16 @@ internal sealed class MainForm : Form
         _bridge.Options.DarkModeEnabled = _darkModeCheck.Checked;
         _bridge.SaveOptions();
         SyncTrayOptions();
+    }
+
+    private void ApplySelectedPreset()
+    {
+        var preset = (RemapPreset)(_presetCombo.SelectedItem ?? RemapPreset.DefaultXbox);
+        _bridge.Options.ApplyPreset(preset);
+        _bridge.SaveOptions();
+        LoadOptionsIntoUi();
+        _presetCombo.SelectedItem = preset;
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Applied preset: {preset}");
     }
 
     private void SyncTrayOptions()

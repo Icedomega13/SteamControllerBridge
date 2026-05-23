@@ -14,12 +14,12 @@ Use this checklist for each public release.
 
 ## GitHub Release
 
-- Tag: `v0.2.0`
-- Title: `Steam Controller Bridge v0.2.0`
-- Body: use `docs/release-v0.2.0.md`
+- Tag: `v0.3.0`
+- Title: `Steam Controller Bridge v0.3.0`
+- Body: use `docs/release-v0.3.0.md`
 - Assets:
-  - `dist/installer/SteamControllerBridgeSetup-0.2.0.exe`
-  - `dist/SteamControllerBridge-win-x64-self-contained-0.2.0.zip`
+  - `dist/installer/SteamControllerBridgeSetup-0.3.0.exe`
+  - `dist/SteamControllerBridge-win-x64-self-contained-0.3.0.zip`
 
 ## Smoke Test
 

@@ -203,7 +203,14 @@ internal sealed class BridgeService : IDisposable
                 var input = new SteamControllerInput(buffer.AsSpan(0, count));
                 _virtualController?.Update(input, Options);
                 _mouse.Update(input, Options);
-                _gyroMouse.Update(input, Options);
+                if (Options.GyroOutputMode == GyroOutputMode.Mouse)
+                {
+                    _gyroMouse.Update(input, Options);
+                }
+                else
+                {
+                    _gyroMouse.Reset();
+                }
                 MaybeSendRumble();
             }
             catch (OperationCanceledException)

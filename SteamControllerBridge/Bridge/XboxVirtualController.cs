@@ -9,6 +9,12 @@ internal sealed class XboxVirtualController : IDisposable
     private readonly ViGEmClient _client = new();
     private readonly IXbox360Controller _controller;
     private const int TurboIntervalMs = 80;
+    private const int GyroStickDeadZone = 120;
+    private const double GyroStickSensitivity = 1.15;
+    private const int GyroStickMax = 22000;
+    private bool _gyroStickActive;
+    private double _gyroStickBiasX;
+    private double _gyroStickBiasZ;
 
     public event EventHandler<XboxRumbleEventArgs>? RumbleReceived;
 
@@ -34,9 +40,78 @@ internal sealed class XboxVirtualController : IDisposable
         _controller.SetSliderValue(Xbox360Slider.RightTrigger, TriggerToByte(input.Report[8], input.Report[9]));
         _controller.SetAxisValue(Xbox360Axis.LeftThumbX, ReadInt16(input.Report, 10));
         _controller.SetAxisValue(Xbox360Axis.LeftThumbY, ReadInt16(input.Report, 12));
-        _controller.SetAxisValue(Xbox360Axis.RightThumbX, ReadInt16(input.Report, 14));
-        _controller.SetAxisValue(Xbox360Axis.RightThumbY, ReadInt16(input.Report, 16));
+        var rightX = ReadInt16(input.Report, 14);
+        var rightY = ReadInt16(input.Report, 16);
+        ApplyGyroRightStick(input, options, ref rightX, ref rightY);
+        _controller.SetAxisValue(Xbox360Axis.RightThumbX, rightX);
+        _controller.SetAxisValue(Xbox360Axis.RightThumbY, rightY);
         _controller.SubmitReport();
+    }
+
+    private void ApplyGyroRightStick(SteamControllerInput input, BridgeOptions options, ref short rightX, ref short rightY)
+    {
+        if (!options.GyroMouseEnabled || options.GyroOutputMode != GyroOutputMode.RightStick || !input.HasGyro)
+        {
+            _gyroStickActive = false;
+            return;
+        }
+
+        if (!IsGyroActive(input, options.GyroMouseActivation))
+        {
+            LearnGyroStickBias(input, fast: false);
+            _gyroStickActive = false;
+            return;
+        }
+
+        if (!_gyroStickActive)
+        {
+            LearnGyroStickBias(input, fast: true);
+            _gyroStickActive = true;
+            return;
+        }
+
+        var yaw = input.GyroZ - _gyroStickBiasZ;
+        var pitch = input.GyroX - _gyroStickBiasX;
+        var gyroX = ApplyGyroStickDeadZone(-yaw);
+        var gyroY = ApplyGyroStickDeadZone(-pitch);
+
+        rightX = AddAxis(rightX, gyroX);
+        rightY = AddAxis(rightY, gyroY);
+    }
+
+    private void LearnGyroStickBias(SteamControllerInput input, bool fast)
+    {
+        var weight = fast ? 0.65 : 0.04;
+        _gyroStickBiasX = Lerp(_gyroStickBiasX, input.GyroX, weight);
+        _gyroStickBiasZ = Lerp(_gyroStickBiasZ, input.GyroZ, weight);
+    }
+
+    private static short AddAxis(short current, int delta)
+    {
+        return (short)Math.Clamp(current + delta, short.MinValue, short.MaxValue);
+    }
+
+    private static int ApplyGyroStickDeadZone(double value)
+    {
+        if (Math.Abs(value) < GyroStickDeadZone)
+        {
+            return 0;
+        }
+
+        return (int)Math.Clamp(value * GyroStickSensitivity, -GyroStickMax, GyroStickMax);
+    }
+
+    private static bool IsGyroActive(SteamControllerInput input, GyroMouseActivation activation)
+    {
+        return activation switch
+        {
+            GyroMouseActivation.LeftTrigger => input.LeftTriggerActive,
+            GyroMouseActivation.RightTrigger => input.RightTriggerActive,
+            GyroMouseActivation.LeftPadTouch => input.LeftPadTouched,
+            GyroMouseActivation.RightPadTouch => input.RightPadTouched,
+            GyroMouseActivation.Always => true,
+            _ => false
+        };
     }
 
     private static ushort BuildButtons(SteamControllerInput input, BridgeOptions options)
@@ -77,6 +152,11 @@ internal sealed class XboxVirtualController : IDisposable
     private static bool IsTurboPulseOn()
     {
         return Environment.TickCount64 / TurboIntervalMs % 2 == 0;
+    }
+
+    private static double Lerp(double current, double target, double weight)
+    {
+        return current + ((target - current) * weight);
     }
 
     private static Xbox360Button? TryMapButton(GamepadButton mapping)

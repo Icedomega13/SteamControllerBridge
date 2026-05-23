@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Added one-click remap presets.
+- Added Nintendo ABXY swap preset.
+- Added FPS gyro mouse and FPS gyro right-stick presets.
+- Added Desktop Mouse preset.
+- Added gyro output mode so gyro can drive either mouse movement or the virtual right stick.
+
 ## 0.2.0
 
 - Added full button remapping for standard Xbox-style buttons and back paddles.

@@ -16,7 +16,7 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.2.0.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.3.0.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
 6. Open Steam Controller Bridge and click `On`.
@@ -40,8 +40,9 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
 - Rumble enable/disable toggle
 - Full button remapping, including ABXY, bumpers, D-pad, stick clicks, View/Menu, Steam/Guide, and L4/L5/R4/R5
 - Per-button turbo toggles
+- One-click remap presets, including Nintendo swap and FPS gyro options
 - Optional trackpad-as-mouse mode
-- Optional gyro-to-mouse mode
+- Optional gyro output to mouse or the virtual right stick
 - Start with Windows toggle
 - Automatic Steam handoff and reconnect attempts
 - Optional dark mode
@@ -99,7 +100,7 @@ This is useful when Windows sees the controller but the bridge cannot find the l
 - Virtual output currently depends on ViGEmBus
 - Steam Controller haptics are implemented as best-effort rumble and may need tuning on real hardware
 - Advanced remapping is global, not per-game
-- Gyro currently maps to mouse movement, not emulator-native motion
+- Gyro currently maps to mouse or virtual right-stick movement, not emulator-native motion
 
 ## Credits
 
