@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+publish/
+dist/
+artifacts/
+
+# User and IDE state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs and crash dumps
+*.log
+*.dmp
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# NuGet
+*.nupkg
+packages/
