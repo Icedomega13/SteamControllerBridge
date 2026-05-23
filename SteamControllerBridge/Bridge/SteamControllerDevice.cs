@@ -75,7 +75,10 @@ internal sealed class SteamControllerDevice : IDisposable
         var settings = new byte[]
         {
             SteamControllerReports.SettingLeftTrackpadMode, 0x00, 0x00,
-            SteamControllerReports.SettingRightTrackpadMode, 0x00, 0x00
+            SteamControllerReports.SettingRightTrackpadMode, 0x00, 0x00,
+            SteamControllerReports.SettingImuMode,
+            (byte)(SteamControllerReports.GyroModeSendRawAccel | SteamControllerReports.GyroModeSendRawGyro),
+            0x00
         };
 
         if (!SendCommand(SteamControllerReports.CommandSetSettings, settings))

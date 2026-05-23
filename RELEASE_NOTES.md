@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.1.1
+# Steam Controller Bridge v0.1.2
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 

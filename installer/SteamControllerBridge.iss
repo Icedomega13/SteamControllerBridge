@@ -1,5 +1,5 @@
 #define MyAppName "Steam Controller Bridge"
-#define MyAppVersion "0.1.1"
+#define MyAppVersion "0.1.2"
 #define MyAppPublisher "Steam Controller Bridge contributors"
 #define MyAppExeName "SteamControllerBridge.exe"
 

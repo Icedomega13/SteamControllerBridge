@@ -39,9 +39,7 @@ internal sealed class MainForm : Form
         Text = "Steam Controller Bridge";
         StartPosition = FormStartPosition.CenterScreen;
         MinimumSize = new Size(420, 260);
-        Size = new Size(460, 340);
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox = false;
+        Size = new Size(520, 520);
         _appIcon = LoadAppIcon();
         Icon = _appIcon;
 
@@ -185,19 +183,24 @@ internal sealed class MainForm : Form
     {
         _advancedPanel.Dock = DockStyle.Fill;
         _advancedPanel.Visible = false;
+        _advancedPanel.AutoScroll = true;
 
         var advancedLayout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             RowCount = 2,
             ColumnCount = 1
         };
-        advancedLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        advancedLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 106));
+        advancedLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        advancedLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
 
         var layout = new TableLayoutPanel
         {
-            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
             RowCount = 11,
             ColumnCount = 2
         };
@@ -368,7 +371,7 @@ internal sealed class MainForm : Form
         _advancedVisible = !_advancedVisible;
         _advancedPanel.Visible = _advancedVisible;
         _advancedButton.Text = _advancedVisible ? "Hide advanced" : "Advanced";
-        Height = _advancedVisible ? 610 : 340;
+        Height = _advancedVisible ? 640 : 360;
     }
 
     private void ApplyTheme()

@@ -16,6 +16,9 @@ internal static class SteamControllerReports
     public const byte CommandSetSettings = 0x87;
     public const byte SettingRightTrackpadMode = 0x07;
     public const byte SettingLeftTrackpadMode = 0x08;
+    public const byte SettingImuMode = 0x30;
+    public const ushort GyroModeSendRawAccel = 0x0008;
+    public const ushort GyroModeSendRawGyro = 0x0010;
 
     public const byte ButtonA = 0x01;
     public const byte ButtonB = 0x02;

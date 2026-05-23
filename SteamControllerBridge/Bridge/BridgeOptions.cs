@@ -2,10 +2,10 @@ namespace SteamControllerBridge.Bridge;
 
 internal sealed class BridgeOptions
 {
-    public PaddleMapping L4 { get; set; } = PaddleMapping.LeftShoulder;
+    public PaddleMapping L4 { get; set; } = PaddleMapping.Y;
     public PaddleMapping L5 { get; set; } = PaddleMapping.X;
-    public PaddleMapping R4 { get; set; } = PaddleMapping.RightShoulder;
-    public PaddleMapping R5 { get; set; } = PaddleMapping.B;
+    public PaddleMapping R4 { get; set; } = PaddleMapping.B;
+    public PaddleMapping R5 { get; set; } = PaddleMapping.A;
     public bool TrackpadMouseEnabled { get; set; }
     public TrackpadMouseSource TrackpadMouseSource { get; set; } = TrackpadMouseSource.Right;
     public bool TrackpadClickEnabled { get; set; } = true;
