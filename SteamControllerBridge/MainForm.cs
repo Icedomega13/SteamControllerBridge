@@ -157,6 +157,15 @@ internal sealed class MainForm : Form
         _rumbleCheck.Margin = new Padding(0, 0, 18, 0);
         _rumbleCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
 
+        _gyroMouseCheck.Text = "Gyro mouse";
+        _gyroMouseCheck.AutoSize = true;
+        _gyroMouseCheck.Margin = new Padding(0, 0, 18, 0);
+        _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
+        ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
+        _gyroActivationCombo.Width = 115;
+        _gyroActivationCombo.Margin = new Padding(0, 0, 18, 0);
+
         _darkModeCheck.Text = "Dark mode";
         _darkModeCheck.AutoSize = true;
         _darkModeCheck.Margin = new Padding(0, 0, 0, 0);
@@ -167,6 +176,8 @@ internal sealed class MainForm : Form
         };
 
         _quickOptionsPanel.Controls.Add(_rumbleCheck);
+        _quickOptionsPanel.Controls.Add(_gyroMouseCheck);
+        _quickOptionsPanel.Controls.Add(_gyroActivationCombo);
         _quickOptionsPanel.Controls.Add(_darkModeCheck);
     }
 
@@ -202,7 +213,6 @@ internal sealed class MainForm : Form
         ConfigureCombo(_r4Combo, Enum.GetValues<PaddleMapping>());
         ConfigureCombo(_r5Combo, Enum.GetValues<PaddleMapping>());
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
-        ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
 
         AddOptionRow(layout, 0, "L4", _l4Combo);
         AddOptionRow(layout, 1, "L5", _l5Combo);
@@ -220,22 +230,15 @@ internal sealed class MainForm : Form
         _trackpadClickCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
         layout.Controls.Add(_trackpadClickCheck, 1, 6);
 
-        _gyroMouseCheck.Text = "Use gyro as mouse";
-        _gyroMouseCheck.AutoSize = true;
-        _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_gyroMouseCheck, 1, 7);
-
-        AddOptionRow(layout, 8, "Gyro activation", _gyroActivationCombo);
-
         _openLogButton.Text = "Open log";
         _openLogButton.AutoSize = true;
         _openLogButton.Click += (_, _) => OpenLog();
-        layout.Controls.Add(_openLogButton, 1, 9);
+        layout.Controls.Add(_openLogButton, 1, 7);
 
         _copyDiagnosticsButton.Text = "Copy diagnostics";
         _copyDiagnosticsButton.AutoSize = true;
         _copyDiagnosticsButton.Click += (_, _) => CopyDiagnostics();
-        layout.Controls.Add(_copyDiagnosticsButton, 1, 10);
+        layout.Controls.Add(_copyDiagnosticsButton, 1, 8);
 
         _logBox.Multiline = true;
         _logBox.ReadOnly = true;
