@@ -9,6 +9,19 @@ The intended experience is deliberately simple:
 3. Turn it on.
 4. Launch a Game Pass, Epic, emulator, or other XInput game.
 
+![Steam Controller Bridge main window](../docs/images/main-window.png)
+
+## Install
+
+1. Download the latest release.
+2. Install ViGEmBus if it is not already installed.
+3. Run the installer or extract the portable ZIP.
+4. Close Steam before turning the bridge on.
+5. Connect the Steam Controller by USB or the Steam Controller Puck.
+6. Click `On`.
+
+The installer does not install ViGEmBus automatically. If ViGEmBus is missing, the app reports that in the main window.
+
 ## Current MVP
 
 - Finds the wired controller or Steam Controller Puck HID interface.

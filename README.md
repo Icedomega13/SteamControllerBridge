@@ -4,9 +4,32 @@ Steam Controller Bridge is a tiny Windows tray app that makes the 2026 Steam Con
 
 The goal is intentionally simple: connect the controller, turn the bridge on, and launch an XInput game. No Steam shortcut setup, no profile editor, no giant dashboard.
 
+![Steam Controller Bridge main window](docs/images/main-window.png)
+
 ## Current Status
 
-This is an early MVP. It works by reading the Steam Controller's raw HID reports and forwarding standard gamepad inputs to a virtual Xbox 360 controller through ViGEmBus.
+This is an early public test build. It works by reading the Steam Controller's raw HID reports and forwarding gamepad input to a virtual Xbox 360 controller through ViGEmBus.
+
+The app is useful today, but it is still community test software. Expect some rough edges around rumble tuning, Steam handoff, and firmware differences.
+
+## Install
+
+1. Download the latest release from the GitHub Releases page.
+2. Install ViGEmBus if you do not already have it.
+3. Run `SteamControllerBridgeSetup-0.2.0.exe`, or extract the portable ZIP.
+4. Close Steam before turning the bridge on.
+5. Connect the Steam Controller by USB or the Steam Controller Puck.
+6. Open Steam Controller Bridge and click `On`.
+
+The installer does not install ViGEmBus automatically. If ViGEmBus is missing, the app will show a clear status message when you turn the bridge on.
+
+## First Run
+
+- Keep Steam closed while testing the bridge.
+- Use the main `On` button first before changing advanced options.
+- Use Advanced only when you want button remaps, turbo, trackpad mouse, startup, or Steam handoff settings.
+- For Nintendo-style layouts, set physical `A` to output `B` and physical `B` to output `A`.
+- If a game sees double input, close Steam and any other controller remapping tools.
 
 ## Features
 
@@ -30,7 +53,7 @@ This is an early MVP. It works by reading the Steam Controller's raw HID reports
 ## Requirements
 
 - Windows 10 or newer
-- .NET 9 Desktop Runtime for framework-dependent builds
+- No separate .NET install is required when using the self-contained release build
 - ViGEmBus installed
 - 2026 Steam Controller, wired or through the Steam Controller Puck
 
@@ -75,6 +98,8 @@ This is useful when Windows sees the controller but the bridge cannot find the l
 - No HidHide integration yet
 - Virtual output currently depends on ViGEmBus
 - Steam Controller haptics are implemented as best-effort rumble and may need tuning on real hardware
+- Advanced remapping is global, not per-game
+- Gyro currently maps to mouse movement, not emulator-native motion
 
 ## Credits
 

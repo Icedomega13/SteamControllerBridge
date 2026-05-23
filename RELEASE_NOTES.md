@@ -30,8 +30,24 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - ViGEmBus installed.
 - Steam closed while using this MVP.
 
+## First Run
+
+1. Install ViGEmBus if needed.
+2. Install Steam Controller Bridge or extract the portable ZIP.
+3. Close Steam.
+4. Connect the controller.
+5. Open Steam Controller Bridge and click `On`.
+
 ## Known Limitations
 
 - ViGEmBus is retired and is used here as a practical MVP backend.
 - Native Switch/DSU motion output is not implemented yet; gyro currently maps to mouse.
+- Trackpad-as-stick is not implemented yet.
+- HidHide duplicate-device handling is not integrated yet.
+- Remapping is currently global rather than per-game.
 - Rumble is best-effort and may need more hardware tuning.
+
+## Release Assets
+
+- `SteamControllerBridgeSetup-0.2.0.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.2.0.zip`

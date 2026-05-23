@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0
+
+- Added full button remapping for standard Xbox-style buttons and back paddles.
+- Added per-button turbo toggles.
+- Added gyro mouse, trackpad mouse, rumble toggle, and dark mode.
+- Added Start with Windows.
+- Added automatic Steam handoff and reconnect attempts.
+- Added installer and portable release packaging.
+- Improved README, release notes, and first-run guidance.
+
 ## 0.1.0
 
 - Initial MVP.
