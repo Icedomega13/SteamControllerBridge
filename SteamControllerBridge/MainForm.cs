@@ -42,8 +42,9 @@ internal sealed class MainForm : Form
     {
         Text = "Steam Controller Bridge";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(420, 260);
-        Size = new Size(520, 520);
+        MinimumSize = new Size(680, 460);
+        Size = new Size(780, 560);
+        Font = new Font("Segoe UI", 9F);
         _appIcon = LoadAppIcon();
         Icon = _appIcon;
 
@@ -81,7 +82,7 @@ internal sealed class MainForm : Form
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(24),
+            Padding = new Padding(22),
             RowCount = 7,
             ColumnCount = 1
         };
@@ -96,9 +97,9 @@ internal sealed class MainForm : Form
         var title = new Label
         {
             Text = "Steam Controller Bridge",
-            Font = new Font(Font.FontFamily, 16, FontStyle.Bold),
+            Font = new Font(Font.FontFamily, 18, FontStyle.Bold),
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 16)
+            Margin = new Padding(0, 0, 0, 14)
         };
 
         _statusLabel.Font = new Font(Font.FontFamily, 11, FontStyle.Bold);
@@ -112,8 +113,10 @@ internal sealed class MainForm : Form
         _enableSwitch.Appearance = Appearance.Button;
         _enableSwitch.TextAlign = ContentAlignment.MiddleCenter;
         _enableSwitch.Font = new Font(Font.FontFamily, 12, FontStyle.Bold);
-        _enableSwitch.Height = 48;
+        _enableSwitch.Height = 52;
         _enableSwitch.Dock = DockStyle.Top;
+        _enableSwitch.FlatStyle = FlatStyle.Flat;
+        _enableSwitch.FlatAppearance.BorderSize = 0;
         _enableSwitch.CheckedChanged += (_, _) =>
         {
             if (_updatingSwitch)
@@ -136,6 +139,8 @@ internal sealed class MainForm : Form
         _advancedButton.Text = "Advanced";
         _advancedButton.AutoSize = true;
         _advancedButton.Margin = new Padding(0, 10, 0, 8);
+        _advancedButton.FlatStyle = FlatStyle.Flat;
+        _advancedButton.FlatAppearance.BorderSize = 0;
         _advancedButton.Click += (_, _) => ToggleAdvanced();
 
         BuildAdvancedPanel();
@@ -169,7 +174,7 @@ internal sealed class MainForm : Form
         _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
 
         ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
-        _gyroActivationCombo.Width = 115;
+        _gyroActivationCombo.Width = 130;
         _gyroActivationCombo.Margin = new Padding(0, 0, 18, 0);
         _gyroActivationCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
 
@@ -192,109 +197,130 @@ internal sealed class MainForm : Form
     {
         _advancedPanel.Dock = DockStyle.Fill;
         _advancedPanel.Visible = false;
-        _advancedPanel.AutoScroll = true;
-
-        var advancedLayout = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Dock = DockStyle.Top,
-            RowCount = 2,
-            ColumnCount = 1
-        };
-        advancedLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        advancedLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
-
-        var layout = new TableLayoutPanel
-        {
-            AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            Dock = DockStyle.Top,
-            RowCount = 33,
-            ColumnCount = 3
-        };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
-        for (var row = 0; row < layout.RowCount; row++)
-        {
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        }
+        _advancedPanel.AutoScroll = false;
 
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
         ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
 
-        var optionRow = 0;
-        AddSectionLabel(layout, optionRow++, "Presets");
-        AddOptionRow(layout, optionRow, "Preset", _presetCombo);
+        var tabs = new TabControl
+        {
+            Dock = DockStyle.Fill,
+            HotTrack = true,
+            Padding = new Point(12, 5),
+            Margin = new Padding(0)
+        };
+
+        tabs.TabPages.Add(BuildPresetTab());
+        tabs.TabPages.Add(BuildButtonsTab());
+        tabs.TabPages.Add(BuildMotionTab());
+        tabs.TabPages.Add(BuildLogsTab());
+        _advancedPanel.Controls.Add(tabs);
+    }
+
+    private TabPage BuildPresetTab()
+    {
+        var tab = CreateTab("Presets");
+        var layout = CreateFormLayout(3);
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        AddOptionRow(layout, 0, "Preset", _presetCombo);
         _applyPresetButton.Text = "Apply";
-        _applyPresetButton.AutoSize = true;
+        _applyPresetButton.Height = 32;
+        _applyPresetButton.Dock = DockStyle.Fill;
         _applyPresetButton.Click += (_, _) => ApplySelectedPreset();
-        layout.Controls.Add(_applyPresetButton, 2, optionRow++);
-        AddSectionLabel(layout, optionRow++, "Button remapping");
-        AddBindingRow(layout, optionRow++, "A", PhysicalButton.A);
-        AddBindingRow(layout, optionRow++, "B", PhysicalButton.B);
-        AddBindingRow(layout, optionRow++, "X", PhysicalButton.X);
-        AddBindingRow(layout, optionRow++, "Y", PhysicalButton.Y);
-        AddBindingRow(layout, optionRow++, "LB", PhysicalButton.LeftShoulder);
-        AddBindingRow(layout, optionRow++, "RB", PhysicalButton.RightShoulder);
-        AddBindingRow(layout, optionRow++, "L3", PhysicalButton.LeftThumb);
-        AddBindingRow(layout, optionRow++, "R3", PhysicalButton.RightThumb);
-        AddBindingRow(layout, optionRow++, "View", PhysicalButton.Back);
-        AddBindingRow(layout, optionRow++, "Menu", PhysicalButton.Start);
-        AddBindingRow(layout, optionRow++, "Steam", PhysicalButton.Guide);
-        AddBindingRow(layout, optionRow++, "D-pad up", PhysicalButton.DPadUp);
-        AddBindingRow(layout, optionRow++, "D-pad down", PhysicalButton.DPadDown);
-        AddBindingRow(layout, optionRow++, "D-pad left", PhysicalButton.DPadLeft);
-        AddBindingRow(layout, optionRow++, "D-pad right", PhysicalButton.DPadRight);
-        AddBindingRow(layout, optionRow++, "L4", PhysicalButton.L4);
-        AddBindingRow(layout, optionRow++, "L5", PhysicalButton.L5);
-        AddBindingRow(layout, optionRow++, "R4", PhysicalButton.R4);
-        AddBindingRow(layout, optionRow++, "R5", PhysicalButton.R5);
-        AddSectionLabel(layout, optionRow++, "Gyro, mouse, and app");
-        AddOptionRow(layout, optionRow++, "Gyro output", _gyroOutputCombo);
-        AddOptionRow(layout, optionRow++, "Mouse pad", _trackpadSourceCombo);
+        layout.Controls.Add(_applyPresetButton, 2, 0);
+        tab.Controls.Add(layout);
+        return tab;
+    }
 
-        _trackpadMouseCheck.Text = "Use trackpad as mouse";
-        _trackpadMouseCheck.AutoSize = true;
-        _trackpadMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_trackpadMouseCheck, 1, optionRow++);
+    private TabPage BuildButtonsTab()
+    {
+        var tab = CreateTab("Buttons");
+        var scroller = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
+            ColumnCount = 6,
+            Padding = new Padding(12)
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 74));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
 
-        _trackpadClickCheck.Text = "Trackpad click is left click";
-        _trackpadClickCheck.AutoSize = true;
-        _trackpadClickCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_trackpadClickCheck, 1, optionRow++);
+        var row = 0;
+        AddBindingPairRow(layout, row++, "A", PhysicalButton.A, "View", PhysicalButton.Back);
+        AddBindingPairRow(layout, row++, "B", PhysicalButton.B, "Menu", PhysicalButton.Start);
+        AddBindingPairRow(layout, row++, "X", PhysicalButton.X, "Steam", PhysicalButton.Guide);
+        AddBindingPairRow(layout, row++, "Y", PhysicalButton.Y, "D-pad up", PhysicalButton.DPadUp);
+        AddBindingPairRow(layout, row++, "LB", PhysicalButton.LeftShoulder, "D-pad down", PhysicalButton.DPadDown);
+        AddBindingPairRow(layout, row++, "RB", PhysicalButton.RightShoulder, "D-pad left", PhysicalButton.DPadLeft);
+        AddBindingPairRow(layout, row++, "L3", PhysicalButton.LeftThumb, "D-pad right", PhysicalButton.DPadRight);
+        AddBindingPairRow(layout, row++, "R3", PhysicalButton.RightThumb, "L4", PhysicalButton.L4);
+        AddBindingPairRow(layout, row++, "L5", PhysicalButton.L5, "R4", PhysicalButton.R4);
+        AddBindingPairRow(layout, row, "R5", PhysicalButton.R5, string.Empty, null);
 
-        _startWithWindowsCheck.Text = "Start with Windows";
-        _startWithWindowsCheck.AutoSize = true;
-        _startWithWindowsCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_startWithWindowsCheck, 1, optionRow++);
+        scroller.Controls.Add(layout);
+        tab.Controls.Add(scroller);
+        return tab;
+    }
 
-        _autoDisableForSteamCheck.Text = "Back off when Steam opens";
-        _autoDisableForSteamCheck.AutoSize = true;
-        _autoDisableForSteamCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_autoDisableForSteamCheck, 1, optionRow++);
+    private TabPage BuildMotionTab()
+    {
+        var tab = CreateTab("Motion");
+        var layout = CreateFormLayout(2);
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        for (var row = 0; row < 7; row++)
+        {
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
 
+        AddOptionRow(layout, 0, "Gyro output", _gyroOutputCombo);
+        AddOptionRow(layout, 1, "Mouse pad", _trackpadSourceCombo);
+        AddCheckRow(layout, 2, _trackpadMouseCheck, "Use trackpad as mouse");
+        AddCheckRow(layout, 3, _trackpadClickCheck, "Trackpad click is left click");
+        AddCheckRow(layout, 4, _startWithWindowsCheck, "Start with Windows");
+        AddCheckRow(layout, 5, _autoDisableForSteamCheck, "Back off when Steam opens");
+        tab.Controls.Add(layout);
+        return tab;
+    }
+
+    private TabPage BuildLogsTab()
+    {
+        var tab = CreateTab("Logs");
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var actions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top };
         _openLogButton.Text = "Open log";
         _openLogButton.AutoSize = true;
         _openLogButton.Click += (_, _) => OpenLog();
-        layout.Controls.Add(_openLogButton, 1, optionRow++);
-
         _copyDiagnosticsButton.Text = "Copy diagnostics";
         _copyDiagnosticsButton.AutoSize = true;
         _copyDiagnosticsButton.Click += (_, _) => CopyDiagnostics();
-        layout.Controls.Add(_copyDiagnosticsButton, 1, optionRow);
+        actions.Controls.Add(_openLogButton);
+        actions.Controls.Add(_copyDiagnosticsButton);
 
         _logBox.Multiline = true;
         _logBox.ReadOnly = true;
         _logBox.ScrollBars = ScrollBars.Vertical;
         _logBox.Dock = DockStyle.Fill;
-        _logBox.Margin = new Padding(0, 10, 0, 0);
+        _logBox.BorderStyle = BorderStyle.None;
 
-        advancedLayout.Controls.Add(layout, 0, 0);
-        advancedLayout.Controls.Add(_logBox, 0, 1);
-        _advancedPanel.Controls.Add(advancedLayout);
+        layout.Controls.Add(actions, 0, 0);
+        layout.Controls.Add(_logBox, 0, 1);
+        tab.Controls.Add(layout);
+        return tab;
     }
 
     private static void ConfigureCombo<T>(ComboBox combo, IEnumerable<T> values)
@@ -334,7 +360,16 @@ internal sealed class MainForm : Form
         layout.SetColumnSpan(label, 3);
     }
 
-    private void AddBindingRow(TableLayoutPanel layout, int row, string label, PhysicalButton button)
+    private void AddBindingPairRow(TableLayoutPanel layout, int row, string leftLabel, PhysicalButton leftButton, string rightLabel, PhysicalButton? rightButton)
+    {
+        AddBindingCells(layout, row, 0, leftLabel, leftButton);
+        if (rightButton is not null)
+        {
+            AddBindingCells(layout, row, 3, rightLabel, rightButton.Value);
+        }
+    }
+
+    private void AddBindingCells(TableLayoutPanel layout, int row, int column, string label, PhysicalButton button)
     {
         var combo = new ComboBox();
         ConfigureCombo(combo, Enum.GetValues<GamepadButton>());
@@ -346,7 +381,7 @@ internal sealed class MainForm : Form
             Text = "Turbo",
             AutoSize = true,
             Anchor = AnchorStyles.Left,
-            Margin = new Padding(8, 4, 0, 0)
+            Margin = new Padding(8, 6, 0, 0)
         };
         turbo.CheckedChanged += (_, _) => SaveOptionsFromUi();
         _turboChecks[button] = turbo;
@@ -359,9 +394,35 @@ internal sealed class MainForm : Form
             Margin = new Padding(0, 6, 8, 0)
         };
 
-        layout.Controls.Add(text, 0, row);
-        layout.Controls.Add(combo, 1, row);
-        layout.Controls.Add(turbo, 2, row);
+        layout.Controls.Add(text, column, row);
+        layout.Controls.Add(combo, column + 1, row);
+        layout.Controls.Add(turbo, column + 2, row);
+    }
+
+    private static TabPage CreateTab(string title)
+    {
+        return new TabPage(title) { Padding = new Padding(4) };
+    }
+
+    private static TableLayoutPanel CreateFormLayout(int columns)
+    {
+        return new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = columns,
+            Padding = new Padding(10)
+        };
+    }
+
+    private void AddCheckRow(TableLayoutPanel layout, int row, CheckBox checkBox, string text)
+    {
+        checkBox.Text = text;
+        checkBox.AutoSize = true;
+        checkBox.Margin = new Padding(0, 8, 0, 0);
+        checkBox.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        layout.Controls.Add(checkBox, 1, row);
     }
 
     private ContextMenuStrip BuildTrayMenu()
@@ -474,6 +535,7 @@ internal sealed class MainForm : Form
         _statusLabel.Text = status.HasError ? "Needs attention" : status.IsEnabled ? "Ready" : "Idle";
         _detailLabel.Text = status.Message;
         _trayIcon.Text = ClampTrayText($"Steam Controller Bridge - {status.Message}");
+        ApplyTheme();
     }
 
     private void ToggleAdvanced()
@@ -487,29 +549,59 @@ internal sealed class MainForm : Form
     private void ApplyTheme()
     {
         var dark = _darkModeCheck.Checked;
-        var back = dark ? Color.FromArgb(22, 22, 24) : SystemColors.Control;
-        var panel = dark ? Color.FromArgb(32, 32, 36) : SystemColors.Window;
+        var back = dark ? Color.FromArgb(18, 22, 28) : Color.FromArgb(244, 247, 250);
+        var panel = dark ? Color.FromArgb(28, 34, 43) : Color.White;
         var fore = dark ? Color.FromArgb(238, 238, 238) : SystemColors.ControlText;
-        var muted = dark ? Color.FromArgb(170, 170, 170) : SystemColors.GrayText;
+        var muted = dark ? Color.FromArgb(170, 178, 188) : Color.FromArgb(92, 101, 112);
+        var accent = dark ? Color.FromArgb(75, 195, 255) : Color.FromArgb(0, 116, 217);
+        var button = dark ? Color.FromArgb(43, 52, 64) : Color.FromArgb(226, 236, 246);
+        var success = dark ? Color.FromArgb(24, 135, 94) : Color.FromArgb(0, 153, 102);
 
         BackColor = back;
         ForeColor = fore;
-        ApplyThemeToControls(Controls, back, panel, fore);
+        ApplyThemeToControls(Controls, back, panel, fore, button, accent);
         _detailLabel.ForeColor = muted;
         _logBox.BackColor = panel;
         _logBox.ForeColor = fore;
-        _logBox.BorderStyle = dark ? BorderStyle.FixedSingle : BorderStyle.Fixed3D;
+        _logBox.BorderStyle = BorderStyle.None;
+        _enableSwitch.BackColor = _bridge.Status.IsEnabled ? success : button;
+        _enableSwitch.ForeColor = _bridge.Status.IsEnabled ? Color.White : fore;
+        _advancedButton.BackColor = button;
+        _advancedButton.ForeColor = fore;
     }
 
-    private static void ApplyThemeToControls(Control.ControlCollection controls, Color back, Color panel, Color fore)
+    private static void ApplyThemeToControls(
+        Control.ControlCollection controls,
+        Color back,
+        Color panel,
+        Color fore,
+        Color button,
+        Color accent)
     {
         foreach (Control control in controls)
         {
             control.ForeColor = fore;
-            control.BackColor = control is TextBox or ComboBox ? panel : back;
+            control.BackColor = control switch
+            {
+                TextBox or ComboBox or TabPage => panel,
+                Button => button,
+                _ => back
+            };
+
+            if (control is Button buttonControl)
+            {
+                buttonControl.FlatStyle = FlatStyle.Flat;
+                buttonControl.FlatAppearance.BorderSize = 0;
+            }
+
+            if (control is TabControl tabControl)
+            {
+                tabControl.BackColor = panel;
+            }
+
             if (control.HasChildren)
             {
-                ApplyThemeToControls(control.Controls, back, panel, fore);
+                ApplyThemeToControls(control.Controls, back, panel, fore, button, accent);
             }
         }
     }

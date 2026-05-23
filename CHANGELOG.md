@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Redesigned the main window with a cleaner modern layout.
+- Replaced the single oversized Advanced page with compact tabs for Presets, Buttons, Motion, and Logs.
+- Improved default window size so controls fit without maximizing the app.
+- Refreshed light and dark theme styling.
+
 ## 0.3.0
 
 - Added one-click remap presets.
