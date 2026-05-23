@@ -4,13 +4,15 @@ namespace SteamControllerBridge.Bridge;
 
 internal static class KeyboardInput
 {
-    public static void SetKey(ushort virtualKey, bool down)
+    public static bool SetKey(ushort virtualKey, bool down, out int errorCode)
     {
+        errorCode = 0;
         if (virtualKey == 0)
         {
-            return;
+            return true;
         }
 
+        var scanCode = (ushort)MapVirtualKey(virtualKey, MAPVK_VK_TO_VSC);
         var input = new INPUT
         {
             type = INPUT_KEYBOARD,
@@ -18,13 +20,22 @@ internal static class KeyboardInput
             {
                 ki = new KEYBDINPUT
                 {
-                    wScan = (ushort)MapVirtualKey(virtualKey, MAPVK_VK_TO_VSC),
-                    dwFlags = KEYEVENTF_SCANCODE | (down ? 0u : KEYEVENTF_KEYUP) | ExtendedFlag(virtualKey)
+                    wVk = scanCode == 0 ? virtualKey : (ushort)0,
+                    wScan = scanCode,
+                    dwFlags = (scanCode == 0 ? 0u : KEYEVENTF_SCANCODE) |
+                        (down ? 0u : KEYEVENTF_KEYUP) |
+                        ExtendedFlag(virtualKey)
                 }
             }
         };
 
-        SendInput(1, [input], Marshal.SizeOf<INPUT>());
+        if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) == 1)
+        {
+            return true;
+        }
+
+        errorCode = Marshal.GetLastWin32Error();
+        return false;
     }
 
     private static uint ExtendedFlag(ushort virtualKey)
@@ -74,7 +85,13 @@ internal static class KeyboardInput
     private struct INPUTUNION
     {
         [FieldOffset(0)]
+        public MOUSEINPUT mi;
+
+        [FieldOffset(0)]
         public KEYBDINPUT ki;
+
+        [FieldOffset(0)]
+        public HARDWAREINPUT hi;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -85,5 +102,24 @@ internal static class KeyboardInput
         public uint dwFlags;
         public uint time;
         public IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MOUSEINPUT
+    {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct HARDWAREINPUT
+    {
+        public uint uMsg;
+        public ushort wParamL;
+        public ushort wParamH;
     }
 }

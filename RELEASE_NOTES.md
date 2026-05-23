@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.5.2
+# Steam Controller Bridge v0.5.3
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -23,9 +23,10 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes dark mode and diagnostic logging.
 
-## Changes in 0.5.2
+## Changes in 0.5.3
 
-- Keyboard mappings now replace matching virtual Xbox button or trigger output instead of duplicating it.
+- Fixed keyboard mapping SendInput structure sizing so Windows can accept mapped key events.
+- Added log messages when Windows rejects mapped keyboard events.
 
 ## Requirements
 
@@ -52,5 +53,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.5.2.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.5.2.zip`
+- `SteamControllerBridgeSetup-0.5.3.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.5.3.zip`

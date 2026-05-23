@@ -4,6 +4,8 @@ internal sealed class KeyboardEmulator
 {
     private readonly HashSet<ushort> _downKeys = [];
 
+    public event EventHandler<string>? LogWritten;
+
     public void Update(SteamControllerInput input, BridgeOptions options)
     {
         var desiredKeys = new HashSet<ushort>();
@@ -19,14 +21,24 @@ internal sealed class KeyboardEmulator
 
         foreach (var key in _downKeys.Except(desiredKeys).ToArray())
         {
-            KeyboardInput.SetKey(key, down: false);
+            if (!KeyboardInput.SetKey(key, down: false, out var errorCode))
+            {
+                LogWritten?.Invoke(this, $"Keyboard key up failed for 0x{key:X2}. Win32 error: {errorCode}");
+            }
+
             _downKeys.Remove(key);
         }
 
         foreach (var key in desiredKeys.Except(_downKeys))
         {
-            KeyboardInput.SetKey(key, down: true);
-            _downKeys.Add(key);
+            if (KeyboardInput.SetKey(key, down: true, out var errorCode))
+            {
+                _downKeys.Add(key);
+            }
+            else
+            {
+                LogWritten?.Invoke(this, $"Keyboard key down failed for 0x{key:X2}. Win32 error: {errorCode}");
+            }
         }
     }
 
@@ -34,7 +46,7 @@ internal sealed class KeyboardEmulator
     {
         foreach (var key in _downKeys)
         {
-            KeyboardInput.SetKey(key, down: false);
+            KeyboardInput.SetKey(key, down: false, out _);
         }
 
         _downKeys.Clear();

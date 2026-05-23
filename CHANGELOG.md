@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.3
+
+- Fixed keyboard mapping SendInput structure sizing so Windows can accept mapped key events.
+- Added log messages when Windows rejects mapped keyboard events.
+
 ## 0.5.2
 
 - Suppressed matching virtual Xbox button or trigger output when that controller input is mapped to a keyboard key.

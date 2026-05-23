@@ -30,6 +30,11 @@ internal sealed class BridgeService : IDisposable
     public BridgeStatus Status { get; private set; } = BridgeStatus.Idle("Off");
     public BridgeOptions Options { get; } = BridgeOptionsStore.Load();
 
+    public BridgeService()
+    {
+        _keyboard.LogWritten += (_, message) => Log(message);
+    }
+
     public void SaveOptions()
     {
         BridgeOptionsStore.Save(Options);
