@@ -35,7 +35,7 @@ internal sealed class GyroMouseEmulator
         var yaw = input.GyroZ - _biasZ;
         var pitch = input.GyroX - _biasX;
 
-        var dx = ApplyDeadZone(yaw);
+        var dx = ApplyDeadZone(-yaw);
         var dy = ApplyDeadZone(-pitch);
         if (dx != 0 || dy != 0)
         {
