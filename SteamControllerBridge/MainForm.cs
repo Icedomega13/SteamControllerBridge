@@ -24,6 +24,7 @@ internal sealed class MainForm : Form
     private readonly CheckBox _rumbleCheck = new();
     private readonly CheckBox _darkModeCheck = new();
     private readonly Button _openLogButton = new();
+    private readonly Button _copyDiagnosticsButton = new();
     private ToolStripMenuItem? _rumbleTrayItem;
     private ToolStripMenuItem? _darkModeTrayItem;
     private readonly Icon _appIcon;
@@ -184,7 +185,7 @@ internal sealed class MainForm : Form
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 10,
+            RowCount = 9,
             ColumnCount = 2
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -220,6 +221,11 @@ internal sealed class MainForm : Form
         _openLogButton.AutoSize = true;
         _openLogButton.Click += (_, _) => OpenLog();
         layout.Controls.Add(_openLogButton, 1, 7);
+
+        _copyDiagnosticsButton.Text = "Copy diagnostics";
+        _copyDiagnosticsButton.AutoSize = true;
+        _copyDiagnosticsButton.Click += (_, _) => CopyDiagnostics();
+        layout.Controls.Add(_copyDiagnosticsButton, 1, 8);
 
         _logBox.Multiline = true;
         _logBox.ReadOnly = true;
@@ -406,6 +412,19 @@ internal sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Could not open log", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void CopyDiagnostics()
+    {
+        try
+        {
+            Clipboard.SetText(SystemDiagnostics.BuildReport());
+            AppendLog($"{DateTime.Now:HH:mm:ss}  Diagnostics copied to clipboard");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Could not copy diagnostics", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

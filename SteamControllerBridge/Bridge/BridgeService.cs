@@ -46,6 +46,20 @@ internal sealed class BridgeService : IDisposable
 
             try
             {
+                if (SystemDiagnostics.IsSteamRunning())
+                {
+                    SetStatus(BridgeStatus.Failed("Close Steam and try again"));
+                    Log("Startup blocked: Steam is running and may claim the controller.");
+                    return;
+                }
+
+                if (!SystemDiagnostics.IsVigemBusInstalled())
+                {
+                    SetStatus(BridgeStatus.Failed("ViGEmBus is not installed"));
+                    Log("Startup blocked: ViGEmBus service was not found.");
+                    return;
+                }
+
                 _controller = SteamControllerDevice.OpenFirst(Log);
                 if (_controller is null)
                 {

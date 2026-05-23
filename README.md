@@ -49,10 +49,10 @@ dotnet run --project .\SteamControllerBridge\SteamControllerBridge.csproj
 ## Publish
 
 ```powershell
-dotnet publish .\SteamControllerBridge\SteamControllerBridge.csproj -c Release -r win-x64 --self-contained false -o .\dist\SteamControllerBridge-win-x64
+dotnet publish .\SteamControllerBridge\SteamControllerBridge.csproj -c Release -r win-x64 --self-contained true -o .\dist\SteamControllerBridge-win-x64-self-contained
 ```
 
-Zip the contents of `dist\SteamControllerBridge-win-x64` for a GitHub Release.
+Zip the contents of `dist\SteamControllerBridge-win-x64-self-contained` for a GitHub Release, or build the Inno Setup installer from `installer\SteamControllerBridge.iss`.
 
 ## Diagnostic Probe
 
