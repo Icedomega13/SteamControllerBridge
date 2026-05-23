@@ -19,8 +19,10 @@ internal sealed class MainForm : Form
     private readonly ComboBox _r4Combo = new();
     private readonly ComboBox _r5Combo = new();
     private readonly ComboBox _trackpadSourceCombo = new();
+    private readonly ComboBox _gyroActivationCombo = new();
     private readonly CheckBox _trackpadMouseCheck = new();
     private readonly CheckBox _trackpadClickCheck = new();
+    private readonly CheckBox _gyroMouseCheck = new();
     private readonly CheckBox _rumbleCheck = new();
     private readonly CheckBox _darkModeCheck = new();
     private readonly Button _openLogButton = new();
@@ -185,7 +187,7 @@ internal sealed class MainForm : Form
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 9,
+            RowCount = 11,
             ColumnCount = 2
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -200,6 +202,7 @@ internal sealed class MainForm : Form
         ConfigureCombo(_r4Combo, Enum.GetValues<PaddleMapping>());
         ConfigureCombo(_r5Combo, Enum.GetValues<PaddleMapping>());
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
+        ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
 
         AddOptionRow(layout, 0, "L4", _l4Combo);
         AddOptionRow(layout, 1, "L5", _l5Combo);
@@ -217,15 +220,22 @@ internal sealed class MainForm : Form
         _trackpadClickCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
         layout.Controls.Add(_trackpadClickCheck, 1, 6);
 
+        _gyroMouseCheck.Text = "Use gyro as mouse";
+        _gyroMouseCheck.AutoSize = true;
+        _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        layout.Controls.Add(_gyroMouseCheck, 1, 7);
+
+        AddOptionRow(layout, 8, "Gyro activation", _gyroActivationCombo);
+
         _openLogButton.Text = "Open log";
         _openLogButton.AutoSize = true;
         _openLogButton.Click += (_, _) => OpenLog();
-        layout.Controls.Add(_openLogButton, 1, 7);
+        layout.Controls.Add(_openLogButton, 1, 9);
 
         _copyDiagnosticsButton.Text = "Copy diagnostics";
         _copyDiagnosticsButton.AutoSize = true;
         _copyDiagnosticsButton.Click += (_, _) => CopyDiagnostics();
-        layout.Controls.Add(_copyDiagnosticsButton, 1, 8);
+        layout.Controls.Add(_copyDiagnosticsButton, 1, 10);
 
         _logBox.Multiline = true;
         _logBox.ReadOnly = true;
@@ -292,8 +302,10 @@ internal sealed class MainForm : Form
         _r4Combo.SelectedItem = _bridge.Options.R4;
         _r5Combo.SelectedItem = _bridge.Options.R5;
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
+        _gyroActivationCombo.SelectedItem = _bridge.Options.GyroMouseActivation;
         _trackpadMouseCheck.Checked = _bridge.Options.TrackpadMouseEnabled;
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
+        _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
         _darkModeCheck.Checked = _bridge.Options.DarkModeEnabled;
         _updatingOptions = false;
@@ -312,8 +324,10 @@ internal sealed class MainForm : Form
         _bridge.Options.R4 = (PaddleMapping)(_r4Combo.SelectedItem ?? _bridge.Options.R4);
         _bridge.Options.R5 = (PaddleMapping)(_r5Combo.SelectedItem ?? _bridge.Options.R5);
         _bridge.Options.TrackpadMouseSource = (TrackpadMouseSource)(_trackpadSourceCombo.SelectedItem ?? _bridge.Options.TrackpadMouseSource);
+        _bridge.Options.GyroMouseActivation = (GyroMouseActivation)(_gyroActivationCombo.SelectedItem ?? _bridge.Options.GyroMouseActivation);
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;
+        _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
         _bridge.Options.DarkModeEnabled = _darkModeCheck.Checked;
         _bridge.SaveOptions();

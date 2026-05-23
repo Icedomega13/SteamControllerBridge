@@ -17,6 +17,7 @@ This is an early MVP. It works by reading the Steam Controller's raw HID reports
 - Rumble enable/disable toggle
 - Back paddle mapping for L4, L5, R4, and R5
 - Optional trackpad-as-mouse mode
+- Optional gyro-to-mouse mode
 - Optional dark mode
 - Lizard mode disable while enabled
 - Lizard mode restore on normal shutdown
@@ -66,7 +67,7 @@ This is useful when Windows sees the controller but the bridge cannot find the l
 
 ## Limitations
 
-- No gyro mapping yet
+- No native Switch/DSU motion output yet
 - No trackpad-as-stick mapping yet
 - No HidHide integration yet
 - No startup option yet

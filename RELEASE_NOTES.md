@@ -10,6 +10,7 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Disables lizard mode while enabled and restores it on shutdown.
 - Includes paddle mapping for L4, L5, R4, and R5.
 - Includes optional trackpad-as-mouse mode.
+- Includes simple gyro-to-mouse mode with selectable activation.
 - Includes optional rumble passthrough and a rumble toggle.
 - Includes dark mode and diagnostic logging.
 
@@ -22,6 +23,6 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 ## Known Limitations
 
 - ViGEmBus is retired and is used here as a practical MVP backend.
-- Gyro mapping is not implemented yet.
+- Native Switch/DSU motion output is not implemented yet; gyro currently maps to mouse.
 - HidHide duplicate-device handling is not implemented yet.
 - Rumble is best-effort and may need more hardware tuning.

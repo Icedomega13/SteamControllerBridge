@@ -9,6 +9,8 @@ internal sealed class BridgeOptions
     public bool TrackpadMouseEnabled { get; set; }
     public TrackpadMouseSource TrackpadMouseSource { get; set; } = TrackpadMouseSource.Right;
     public bool TrackpadClickEnabled { get; set; } = true;
+    public bool GyroMouseEnabled { get; set; }
+    public GyroMouseActivation GyroMouseActivation { get; set; } = GyroMouseActivation.LeftTrigger;
     public bool RumbleEnabled { get; set; } = true;
     public bool DarkModeEnabled { get; set; }
 }
@@ -37,4 +39,13 @@ internal enum TrackpadMouseSource
     Right,
     Left,
     Both
+}
+
+internal enum GyroMouseActivation
+{
+    LeftTrigger,
+    RightTrigger,
+    LeftPadTouch,
+    RightPadTouch,
+    Always
 }

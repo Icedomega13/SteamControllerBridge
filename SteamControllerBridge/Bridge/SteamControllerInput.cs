@@ -23,13 +23,26 @@ internal readonly ref struct SteamControllerInput
     public bool LeftPadClicked => (B3 & SteamControllerReports.ButtonLeftPadClick) != 0;
     public bool RightPadTouched => (B2 & SteamControllerReports.ButtonRightPadTouch) != 0;
     public bool RightPadClicked => (B2 & SteamControllerReports.ButtonRightPadClick) != 0;
+    public bool LeftTriggerActive => LeftTrigger > 32;
+    public bool RightTriggerActive => RightTrigger > 32;
+    public byte LeftTrigger => TriggerToByte(ReadInt16(6));
+    public byte RightTrigger => TriggerToByte(ReadInt16(8));
     public short LeftPadX => ReadInt16(18);
     public short LeftPadY => ReadInt16(20);
     public short RightPadX => ReadInt16(24);
     public short RightPadY => ReadInt16(26);
+    public bool HasGyro => _report.Length >= 46;
+    public short GyroX => HasGyro ? ReadInt16(40) : (short)0;
+    public short GyroY => HasGyro ? ReadInt16(42) : (short)0;
+    public short GyroZ => HasGyro ? ReadInt16(44) : (short)0;
 
     private short ReadInt16(int offset)
     {
         return (short)(_report[offset] | (_report[offset + 1] << 8));
+    }
+
+    private static byte TriggerToByte(short value)
+    {
+        return (byte)Math.Clamp(Math.Max(0, (int)value) >> 7, 0, 255);
     }
 }
