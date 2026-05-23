@@ -17,6 +17,9 @@ internal sealed class BridgeService : IDisposable
     private byte _lastSentRumbleSmall;
     private byte _lastSentRumbleLarge;
     private DateTime _nextRumbleAt = DateTime.MinValue;
+    private DateTime _nextReconnectAt = DateTime.MinValue;
+    private bool _userWantsEnabled;
+    private bool _steamBackoffActive;
 
     public event EventHandler<BridgeStatus>? StatusChanged;
     public event EventHandler<string>? LogWritten;
@@ -27,10 +30,49 @@ internal sealed class BridgeService : IDisposable
     public void SaveOptions()
     {
         BridgeOptionsStore.Save(Options);
+        StartupManager.SetEnabled(Options.StartWithWindows);
         if (!Options.RumbleEnabled)
         {
             StopRumble();
         }
+    }
+
+    public void TickLifecycle()
+    {
+        lock (_gate)
+        {
+            if (Options.AutoDisableForSteam && Status.IsEnabled && SystemDiagnostics.IsSteamRunning())
+            {
+                Log("Steam started. Backing off so Steam Input can take over.");
+                _steamBackoffActive = true;
+                StopInternal(userRequested: false, restoreLizard: true);
+                SetStatus(BridgeStatus.Failed("Paused while Steam is running"));
+                return;
+            }
+
+            if (!_userWantsEnabled || Status.IsEnabled || Status.IsWorking || DateTime.UtcNow < _nextReconnectAt)
+            {
+                return;
+            }
+
+            if (Options.AutoDisableForSteam && SystemDiagnostics.IsSteamRunning())
+            {
+                if (!_steamBackoffActive)
+                {
+                    Log("Waiting to reconnect until Steam closes.");
+                    _steamBackoffActive = true;
+                    SetStatus(BridgeStatus.Failed("Paused while Steam is running"));
+                }
+
+                _nextReconnectAt = DateTime.UtcNow.AddSeconds(3);
+                return;
+            }
+
+            _steamBackoffActive = false;
+            _nextReconnectAt = DateTime.UtcNow.AddSeconds(3);
+        }
+
+        Start();
     }
 
     public void Start()
@@ -42,6 +84,8 @@ internal sealed class BridgeService : IDisposable
                 return;
             }
 
+            _userWantsEnabled = true;
+            _steamBackoffActive = false;
             SetStatus(BridgeStatus.Working("Connecting to Steam Controller..."));
             Log($"Starting bridge. Log file: {BridgeLog.LogPath}");
 
@@ -110,23 +154,34 @@ internal sealed class BridgeService : IDisposable
     {
         lock (_gate)
         {
-            if (!Status.IsEnabled && _controller is null && _virtualController is null)
-            {
-                SetStatus(BridgeStatus.Idle("Off"));
-                return;
-            }
-
-            SetStatus(BridgeStatus.Working("Turning off..."));
-            StopReadLoop();
-            _mouse.Reset();
-            _gyroMouse.Reset();
-            _controller?.SendRumble(0, 0);
-            _virtualController?.Dispose();
-            _virtualController = null;
-            CleanupController(restoreLizard: true);
-            SetStatus(BridgeStatus.Idle("Off"));
-            Log("Bridge stopped.");
+            StopInternal(userRequested: true, restoreLizard: true);
         }
+    }
+
+    private void StopInternal(bool userRequested, bool restoreLizard)
+    {
+        if (userRequested)
+        {
+            _userWantsEnabled = false;
+            _steamBackoffActive = false;
+        }
+
+        if (!Status.IsEnabled && _controller is null && _virtualController is null)
+        {
+            SetStatus(userRequested ? BridgeStatus.Idle("Off") : Status);
+            return;
+        }
+
+        SetStatus(BridgeStatus.Working("Turning off..."));
+        StopReadLoop();
+        _mouse.Reset();
+        _gyroMouse.Reset();
+        _controller?.SendRumble(0, 0);
+        _virtualController?.Dispose();
+        _virtualController = null;
+        CleanupController(restoreLizard);
+        SetStatus(userRequested ? BridgeStatus.Idle("Off") : BridgeStatus.Failed("Paused"));
+        Log(userRequested ? "Bridge stopped." : "Bridge paused.");
     }
 
     private async Task ReadLoop(CancellationToken token)
@@ -177,6 +232,7 @@ internal sealed class BridgeService : IDisposable
                 _virtualController = null;
                 CleanupController(restoreLizard: false);
                 SetStatus(BridgeStatus.Failed(message));
+                _nextReconnectAt = DateTime.UtcNow.AddSeconds(2);
             }
         });
     }

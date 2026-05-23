@@ -27,16 +27,21 @@ internal static class BridgeOptionsStore
                 return new BridgeOptions();
             }
 
-            return JsonSerializer.Deserialize<BridgeOptions>(File.ReadAllText(OptionsPath)) ?? new BridgeOptions();
+            var options = JsonSerializer.Deserialize<BridgeOptions>(File.ReadAllText(OptionsPath)) ?? new BridgeOptions();
+            options.Normalize();
+            return options;
         }
         catch
         {
-            return new BridgeOptions();
+            var options = new BridgeOptions();
+            options.Normalize();
+            return options;
         }
     }
 
     public static void Save(BridgeOptions options)
     {
+        options.Normalize();
         File.WriteAllText(OptionsPath, JsonSerializer.Serialize(options, JsonOptions));
     }
 }

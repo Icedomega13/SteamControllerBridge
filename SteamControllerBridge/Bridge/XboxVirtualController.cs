@@ -8,6 +8,7 @@ internal sealed class XboxVirtualController : IDisposable
 {
     private readonly ViGEmClient _client = new();
     private readonly IXbox360Controller _controller;
+    private const int TurboIntervalMs = 80;
 
     public event EventHandler<XboxRumbleEventArgs>? RumbleReceived;
 
@@ -26,29 +27,7 @@ internal sealed class XboxVirtualController : IDisposable
             return;
         }
 
-        ushort buttons = 0;
-
-        AddButton(ref buttons, input.B0, SteamControllerReports.ButtonA, Xbox360Button.A);
-        AddButton(ref buttons, input.B0, SteamControllerReports.ButtonB, Xbox360Button.B);
-        AddButton(ref buttons, input.B0, SteamControllerReports.ButtonX, Xbox360Button.X);
-        AddButton(ref buttons, input.B0, SteamControllerReports.ButtonY, Xbox360Button.Y);
-        AddButton(ref buttons, input.B0, SteamControllerReports.ButtonMenu, Xbox360Button.Start);
-        AddButton(ref buttons, input.B0, SteamControllerReports.ButtonRightStick, Xbox360Button.RightThumb);
-
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonView, Xbox360Button.Back);
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonLeftStick, Xbox360Button.LeftThumb);
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonRightBumper, Xbox360Button.RightShoulder);
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonDPadUp, Xbox360Button.Up);
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonDPadDown, Xbox360Button.Down);
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonDPadLeft, Xbox360Button.Left);
-        AddButton(ref buttons, input.B1, SteamControllerReports.ButtonDPadRight, Xbox360Button.Right);
-
-        AddButton(ref buttons, input.B2, SteamControllerReports.ButtonSteam, Xbox360Button.Guide);
-        AddButton(ref buttons, input.B2, SteamControllerReports.ButtonLeftBumper, Xbox360Button.LeftShoulder);
-        AddMappedButton(ref buttons, input.L4, options.L4);
-        AddMappedButton(ref buttons, input.L5, options.L5);
-        AddMappedButton(ref buttons, input.R4, options.R4);
-        AddMappedButton(ref buttons, input.R5, options.R5);
+        var buttons = BuildButtons(input, options);
 
         _controller.SetButtonsFull(buttons);
         _controller.SetSliderValue(Xbox360Slider.LeftTrigger, TriggerToByte(input.Report[6], input.Report[7]));
@@ -60,17 +39,34 @@ internal sealed class XboxVirtualController : IDisposable
         _controller.SubmitReport();
     }
 
-    private static void AddButton(ref ushort buttons, byte source, byte mask, Xbox360Button button)
+    private static ushort BuildButtons(SteamControllerInput input, BridgeOptions options)
     {
-        if ((source & mask) != 0)
-        {
-            buttons |= button.Value;
-        }
+        ushort buttons = 0;
+        AddMappedButton(ref buttons, input.A, options.GetBinding(PhysicalButton.A));
+        AddMappedButton(ref buttons, input.B, options.GetBinding(PhysicalButton.B));
+        AddMappedButton(ref buttons, input.X, options.GetBinding(PhysicalButton.X));
+        AddMappedButton(ref buttons, input.Y, options.GetBinding(PhysicalButton.Y));
+        AddMappedButton(ref buttons, input.LeftShoulder, options.GetBinding(PhysicalButton.LeftShoulder));
+        AddMappedButton(ref buttons, input.RightShoulder, options.GetBinding(PhysicalButton.RightShoulder));
+        AddMappedButton(ref buttons, input.LeftThumb, options.GetBinding(PhysicalButton.LeftThumb));
+        AddMappedButton(ref buttons, input.RightThumb, options.GetBinding(PhysicalButton.RightThumb));
+        AddMappedButton(ref buttons, input.Back, options.GetBinding(PhysicalButton.Back));
+        AddMappedButton(ref buttons, input.Start, options.GetBinding(PhysicalButton.Start));
+        AddMappedButton(ref buttons, input.Guide, options.GetBinding(PhysicalButton.Guide));
+        AddMappedButton(ref buttons, input.DPadUp, options.GetBinding(PhysicalButton.DPadUp));
+        AddMappedButton(ref buttons, input.DPadDown, options.GetBinding(PhysicalButton.DPadDown));
+        AddMappedButton(ref buttons, input.DPadLeft, options.GetBinding(PhysicalButton.DPadLeft));
+        AddMappedButton(ref buttons, input.DPadRight, options.GetBinding(PhysicalButton.DPadRight));
+        AddMappedButton(ref buttons, input.L4, options.GetBinding(PhysicalButton.L4));
+        AddMappedButton(ref buttons, input.L5, options.GetBinding(PhysicalButton.L5));
+        AddMappedButton(ref buttons, input.R4, options.GetBinding(PhysicalButton.R4));
+        AddMappedButton(ref buttons, input.R5, options.GetBinding(PhysicalButton.R5));
+        return buttons;
     }
 
-    private static void AddMappedButton(ref ushort buttons, bool pressed, PaddleMapping mapping)
+    private static void AddMappedButton(ref ushort buttons, bool pressed, ButtonBinding binding)
     {
-        if (!pressed || TryMapButton(mapping) is not { } button)
+        if (!pressed || binding.Turbo && !IsTurboPulseOn() || TryMapButton(binding.Output) is not { } button)
         {
             return;
         }
@@ -78,24 +74,30 @@ internal sealed class XboxVirtualController : IDisposable
         buttons |= button.Value;
     }
 
-    private static Xbox360Button? TryMapButton(PaddleMapping mapping)
+    private static bool IsTurboPulseOn()
+    {
+        return Environment.TickCount64 / TurboIntervalMs % 2 == 0;
+    }
+
+    private static Xbox360Button? TryMapButton(GamepadButton mapping)
     {
         return mapping switch
         {
-            PaddleMapping.A => Xbox360Button.A,
-            PaddleMapping.B => Xbox360Button.B,
-            PaddleMapping.X => Xbox360Button.X,
-            PaddleMapping.Y => Xbox360Button.Y,
-            PaddleMapping.LeftShoulder => Xbox360Button.LeftShoulder,
-            PaddleMapping.RightShoulder => Xbox360Button.RightShoulder,
-            PaddleMapping.LeftThumb => Xbox360Button.LeftThumb,
-            PaddleMapping.RightThumb => Xbox360Button.RightThumb,
-            PaddleMapping.Back => Xbox360Button.Back,
-            PaddleMapping.Start => Xbox360Button.Start,
-            PaddleMapping.DPadUp => Xbox360Button.Up,
-            PaddleMapping.DPadDown => Xbox360Button.Down,
-            PaddleMapping.DPadLeft => Xbox360Button.Left,
-            PaddleMapping.DPadRight => Xbox360Button.Right,
+            GamepadButton.A => Xbox360Button.A,
+            GamepadButton.B => Xbox360Button.B,
+            GamepadButton.X => Xbox360Button.X,
+            GamepadButton.Y => Xbox360Button.Y,
+            GamepadButton.LeftShoulder => Xbox360Button.LeftShoulder,
+            GamepadButton.RightShoulder => Xbox360Button.RightShoulder,
+            GamepadButton.LeftThumb => Xbox360Button.LeftThumb,
+            GamepadButton.RightThumb => Xbox360Button.RightThumb,
+            GamepadButton.Back => Xbox360Button.Back,
+            GamepadButton.Start => Xbox360Button.Start,
+            GamepadButton.Guide => Xbox360Button.Guide,
+            GamepadButton.DPadUp => Xbox360Button.Up,
+            GamepadButton.DPadDown => Xbox360Button.Down,
+            GamepadButton.DPadLeft => Xbox360Button.Left,
+            GamepadButton.DPadRight => Xbox360Button.Right,
             _ => null
         };
     }

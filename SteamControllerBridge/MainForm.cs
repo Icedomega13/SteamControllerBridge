@@ -14,10 +14,8 @@ internal sealed class MainForm : Form
     private readonly TextBox _logBox = new();
     private readonly Button _advancedButton = new();
     private readonly Panel _advancedPanel = new();
-    private readonly ComboBox _l4Combo = new();
-    private readonly ComboBox _l5Combo = new();
-    private readonly ComboBox _r4Combo = new();
-    private readonly ComboBox _r5Combo = new();
+    private readonly Dictionary<PhysicalButton, ComboBox> _buttonMapCombos = new();
+    private readonly Dictionary<PhysicalButton, CheckBox> _turboChecks = new();
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly ComboBox _gyroActivationCombo = new();
     private readonly CheckBox _trackpadMouseCheck = new();
@@ -25,8 +23,11 @@ internal sealed class MainForm : Form
     private readonly CheckBox _gyroMouseCheck = new();
     private readonly CheckBox _rumbleCheck = new();
     private readonly CheckBox _darkModeCheck = new();
+    private readonly CheckBox _startWithWindowsCheck = new();
+    private readonly CheckBox _autoDisableForSteamCheck = new();
     private readonly Button _openLogButton = new();
     private readonly Button _copyDiagnosticsButton = new();
+    private readonly System.Windows.Forms.Timer _lifecycleTimer = new();
     private ToolStripMenuItem? _rumbleTrayItem;
     private ToolStripMenuItem? _darkModeTrayItem;
     private readonly Icon _appIcon;
@@ -51,6 +52,9 @@ internal sealed class MainForm : Form
             ContextMenuStrip = BuildTrayMenu()
         };
         _trayIcon.DoubleClick += (_, _) => ShowMainWindow();
+        _lifecycleTimer.Interval = 2500;
+        _lifecycleTimer.Tick += (_, _) => Task.Run(() => _bridge.TickLifecycle());
+        _lifecycleTimer.Start();
 
         BuildUi();
         LoadOptionsIntoUi();
@@ -60,6 +64,7 @@ internal sealed class MainForm : Form
         FormClosing += (_, _) =>
         {
             _bridge.Dispose();
+            _lifecycleTimer.Stop();
             _trayIcon.Dispose();
             _appIcon.Dispose();
         };
@@ -202,47 +207,72 @@ internal sealed class MainForm : Form
             AutoSize = true,
             AutoSizeMode = AutoSizeMode.GrowAndShrink,
             Dock = DockStyle.Top,
-            RowCount = 11,
-            ColumnCount = 2
+            RowCount = 30,
+            ColumnCount = 3
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
         for (var row = 0; row < layout.RowCount; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        ConfigureCombo(_l4Combo, Enum.GetValues<PaddleMapping>());
-        ConfigureCombo(_l5Combo, Enum.GetValues<PaddleMapping>());
-        ConfigureCombo(_r4Combo, Enum.GetValues<PaddleMapping>());
-        ConfigureCombo(_r5Combo, Enum.GetValues<PaddleMapping>());
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
 
-        AddOptionRow(layout, 0, "L4", _l4Combo);
-        AddOptionRow(layout, 1, "L5", _l5Combo);
-        AddOptionRow(layout, 2, "R4", _r4Combo);
-        AddOptionRow(layout, 3, "R5", _r5Combo);
-        AddOptionRow(layout, 4, "Mouse pad", _trackpadSourceCombo);
+        var optionRow = 0;
+        AddSectionLabel(layout, optionRow++, "Button remapping");
+        AddBindingRow(layout, optionRow++, "A", PhysicalButton.A);
+        AddBindingRow(layout, optionRow++, "B", PhysicalButton.B);
+        AddBindingRow(layout, optionRow++, "X", PhysicalButton.X);
+        AddBindingRow(layout, optionRow++, "Y", PhysicalButton.Y);
+        AddBindingRow(layout, optionRow++, "LB", PhysicalButton.LeftShoulder);
+        AddBindingRow(layout, optionRow++, "RB", PhysicalButton.RightShoulder);
+        AddBindingRow(layout, optionRow++, "L3", PhysicalButton.LeftThumb);
+        AddBindingRow(layout, optionRow++, "R3", PhysicalButton.RightThumb);
+        AddBindingRow(layout, optionRow++, "View", PhysicalButton.Back);
+        AddBindingRow(layout, optionRow++, "Menu", PhysicalButton.Start);
+        AddBindingRow(layout, optionRow++, "Steam", PhysicalButton.Guide);
+        AddBindingRow(layout, optionRow++, "D-pad up", PhysicalButton.DPadUp);
+        AddBindingRow(layout, optionRow++, "D-pad down", PhysicalButton.DPadDown);
+        AddBindingRow(layout, optionRow++, "D-pad left", PhysicalButton.DPadLeft);
+        AddBindingRow(layout, optionRow++, "D-pad right", PhysicalButton.DPadRight);
+        AddBindingRow(layout, optionRow++, "L4", PhysicalButton.L4);
+        AddBindingRow(layout, optionRow++, "L5", PhysicalButton.L5);
+        AddBindingRow(layout, optionRow++, "R4", PhysicalButton.R4);
+        AddBindingRow(layout, optionRow++, "R5", PhysicalButton.R5);
+        AddSectionLabel(layout, optionRow++, "Mouse and app");
+        AddOptionRow(layout, optionRow++, "Mouse pad", _trackpadSourceCombo);
 
         _trackpadMouseCheck.Text = "Use trackpad as mouse";
         _trackpadMouseCheck.AutoSize = true;
         _trackpadMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_trackpadMouseCheck, 1, 5);
+        layout.Controls.Add(_trackpadMouseCheck, 1, optionRow++);
 
         _trackpadClickCheck.Text = "Trackpad click is left click";
         _trackpadClickCheck.AutoSize = true;
         _trackpadClickCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-        layout.Controls.Add(_trackpadClickCheck, 1, 6);
+        layout.Controls.Add(_trackpadClickCheck, 1, optionRow++);
+
+        _startWithWindowsCheck.Text = "Start with Windows";
+        _startWithWindowsCheck.AutoSize = true;
+        _startWithWindowsCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        layout.Controls.Add(_startWithWindowsCheck, 1, optionRow++);
+
+        _autoDisableForSteamCheck.Text = "Back off when Steam opens";
+        _autoDisableForSteamCheck.AutoSize = true;
+        _autoDisableForSteamCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        layout.Controls.Add(_autoDisableForSteamCheck, 1, optionRow++);
 
         _openLogButton.Text = "Open log";
         _openLogButton.AutoSize = true;
         _openLogButton.Click += (_, _) => OpenLog();
-        layout.Controls.Add(_openLogButton, 1, 7);
+        layout.Controls.Add(_openLogButton, 1, optionRow++);
 
         _copyDiagnosticsButton.Text = "Copy diagnostics";
         _copyDiagnosticsButton.AutoSize = true;
         _copyDiagnosticsButton.Click += (_, _) => CopyDiagnostics();
-        layout.Controls.Add(_copyDiagnosticsButton, 1, 8);
+        layout.Controls.Add(_copyDiagnosticsButton, 1, optionRow);
 
         _logBox.Multiline = true;
         _logBox.ReadOnly = true;
@@ -279,6 +309,49 @@ internal sealed class MainForm : Form
         layout.Controls.Add(combo, 1, row);
     }
 
+    private void AddSectionLabel(TableLayoutPanel layout, int row, string text)
+    {
+        var label = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            Font = new Font(Font.FontFamily, 9, FontStyle.Bold),
+            Margin = new Padding(0, 12, 0, 4)
+        };
+        layout.Controls.Add(label, 0, row);
+        layout.SetColumnSpan(label, 3);
+    }
+
+    private void AddBindingRow(TableLayoutPanel layout, int row, string label, PhysicalButton button)
+    {
+        var combo = new ComboBox();
+        ConfigureCombo(combo, Enum.GetValues<GamepadButton>());
+        combo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
+        _buttonMapCombos[button] = combo;
+
+        var turbo = new CheckBox
+        {
+            Text = "Turbo",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(8, 4, 0, 0)
+        };
+        turbo.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        _turboChecks[button] = turbo;
+
+        var text = new Label
+        {
+            Text = label,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 6, 8, 0)
+        };
+
+        layout.Controls.Add(text, 0, row);
+        layout.Controls.Add(combo, 1, row);
+        layout.Controls.Add(turbo, 2, row);
+    }
+
     private ContextMenuStrip BuildTrayMenu()
     {
         var menu = new ContextMenuStrip();
@@ -304,14 +377,20 @@ internal sealed class MainForm : Form
     private void LoadOptionsIntoUi()
     {
         _updatingOptions = true;
-        _l4Combo.SelectedItem = _bridge.Options.L4;
-        _l5Combo.SelectedItem = _bridge.Options.L5;
-        _r4Combo.SelectedItem = _bridge.Options.R4;
-        _r5Combo.SelectedItem = _bridge.Options.R5;
+        foreach (var (button, combo) in _buttonMapCombos)
+        {
+            var binding = _bridge.Options.GetBinding(button);
+            combo.SelectedItem = binding.Output;
+            _turboChecks[button].Checked = binding.Turbo;
+        }
+
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
         _gyroActivationCombo.SelectedItem = _bridge.Options.GyroMouseActivation;
         _trackpadMouseCheck.Checked = _bridge.Options.TrackpadMouseEnabled;
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
+        _bridge.Options.StartWithWindows = StartupManager.IsEnabled();
+        _startWithWindowsCheck.Checked = _bridge.Options.StartWithWindows;
+        _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
         _darkModeCheck.Checked = _bridge.Options.DarkModeEnabled;
@@ -326,14 +405,19 @@ internal sealed class MainForm : Form
             return;
         }
 
-        _bridge.Options.L4 = (PaddleMapping)(_l4Combo.SelectedItem ?? _bridge.Options.L4);
-        _bridge.Options.L5 = (PaddleMapping)(_l5Combo.SelectedItem ?? _bridge.Options.L5);
-        _bridge.Options.R4 = (PaddleMapping)(_r4Combo.SelectedItem ?? _bridge.Options.R4);
-        _bridge.Options.R5 = (PaddleMapping)(_r5Combo.SelectedItem ?? _bridge.Options.R5);
+        foreach (var (button, combo) in _buttonMapCombos)
+        {
+            var binding = _bridge.Options.GetBinding(button);
+            binding.Output = (GamepadButton)(combo.SelectedItem ?? binding.Output);
+            binding.Turbo = _turboChecks[button].Checked;
+        }
+
         _bridge.Options.TrackpadMouseSource = (TrackpadMouseSource)(_trackpadSourceCombo.SelectedItem ?? _bridge.Options.TrackpadMouseSource);
         _bridge.Options.GyroMouseActivation = (GyroMouseActivation)(_gyroActivationCombo.SelectedItem ?? _bridge.Options.GyroMouseActivation);
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;
+        _bridge.Options.StartWithWindows = _startWithWindowsCheck.Checked;
+        _bridge.Options.AutoDisableForSteam = _autoDisableForSteamCheck.Checked;
         _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
         _bridge.Options.DarkModeEnabled = _darkModeCheck.Checked;

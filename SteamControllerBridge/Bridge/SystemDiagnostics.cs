@@ -23,6 +23,7 @@ internal static class SystemDiagnostics
         var appVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
         var steamRunning = IsSteamRunning() ? "yes" : "no";
         var vigemInstalled = IsVigemBusInstalled() ? "yes" : "no";
+        var startup = StartupManager.IsEnabled() ? "yes" : "no";
 
         return string.Join(Environment.NewLine, new[]
         {
@@ -34,6 +35,7 @@ internal static class SystemDiagnostics
             $"Process architecture: {RuntimeInformation.ProcessArchitecture}",
             $"Steam running: {steamRunning}",
             $"ViGEmBus installed: {vigemInstalled}",
+            $"Start with Windows: {startup}",
             $"Settings: {BridgeOptionsStore.OptionsPath}",
             $"Log: {BridgeLog.LogPath}",
             "Known state reports: 0x42, 0x45",

@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.1.4
+# Steam Controller Bridge v0.2.0
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -8,16 +8,21 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Supports wired and Steam Controller Puck HID interfaces.
 - Handles known state report IDs `0x42` and `0x45`.
 - Disables lizard mode while enabled and restores it on shutdown.
-- Includes paddle mapping for L4, L5, R4, and R5.
+- Includes full button remapping for standard gamepad buttons and back paddles.
+- Includes per-button turbo toggles for rapid-fire style presses.
 - Includes optional trackpad-as-mouse mode.
 - Includes simple gyro-to-mouse mode with selectable activation.
 - Includes optional rumble passthrough and a rumble toggle.
+- Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes dark mode and diagnostic logging.
 
-## Fixes in 0.1.4
+## Changes in 0.2.0
 
-- Gyro activation dropdown changes now apply immediately instead of staying on the previous activation mode.
-- Gyro mouse horizontal movement now follows controller aim direction instead of being inverted.
+- Added advanced remapping for ABXY, bumpers, stick clicks, View/Menu, Steam/Guide, D-pad, and L4/L5/R4/R5.
+- Added a Turbo checkbox next to each remappable button.
+- Added Start with Windows.
+- Added automatic backoff when Steam opens, with reconnect attempts after Steam closes or a controller reconnects.
+- Kept default behavior simple: standard buttons map normally, while L4=Y, L5=X, R4=B, and R5=A.
 
 ## Requirements
 
@@ -29,5 +34,4 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 - ViGEmBus is retired and is used here as a practical MVP backend.
 - Native Switch/DSU motion output is not implemented yet; gyro currently maps to mouse.
-- HidHide duplicate-device handling is not implemented yet.
 - Rumble is best-effort and may need more hardware tuning.

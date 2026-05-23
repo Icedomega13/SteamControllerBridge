@@ -14,7 +14,7 @@ The intended experience is deliberately simple:
 - Finds the wired controller or Steam Controller Puck HID interface.
 - Disables lizard mode while enabled.
 - Creates one virtual Xbox 360 controller through ViGEmBus.
-- Translates standard gamepad inputs into XInput:
+- Translates and remaps standard gamepad inputs into XInput:
   - ABXY
   - D-pad
   - bumpers
@@ -26,7 +26,8 @@ The intended experience is deliberately simple:
   - Steam button as Guide
 - Passes Xbox rumble through to Steam Controller haptics on a best-effort basis.
 - Provides optional trackpad mouse mode.
-- Saves simple advanced options, including paddle mappings and dark mode.
+- Saves simple advanced options, including full button remapping, turbo toggles, startup, Steam handoff, and dark mode.
+- Can back off when Steam starts and reconnect when Steam closes.
 - Restores lizard mode when turned off or when the app exits normally.
 - Keeps advanced options and the log hidden behind one button.
 
@@ -54,6 +55,6 @@ dotnet run
 
 Steam should be closed for this MVP. Steam can claim the controller, which prevents direct raw HID access.
 
-Gyro, trackpad-as-stick, HidHide duplicate suppression, startup behavior, and a better virtual-device backend are intentionally left out of this pass so the core switch stays reliable.
+Trackpad-as-stick, HidHide duplicate suppression, native motion output, and a better virtual-device backend are intentionally left out of this pass so the core switch stays reliable.
 
 Steam Controller haptics are implemented from public output-report behavior and may need tuning on real hardware.

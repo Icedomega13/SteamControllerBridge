@@ -16,7 +16,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>SteamControllerBridge</AssemblyName>
     <RootNamespace>SteamControllerBridge</RootNamespace>
-    <Version>0.1.4</Version>
+    <Version>0.2.0</Version>
     <Authors>Steam Controller Bridge contributors</Authors>
     <Product>Steam Controller Bridge</Product>
     <Description>Simple Windows bridge that exposes the 2026 Steam Controller as a virtual Xbox 360 controller.</Description>

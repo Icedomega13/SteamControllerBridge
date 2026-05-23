@@ -15,9 +15,12 @@ This is an early MVP. It works by reading the Steam Controller's raw HID reports
 - Virtual Xbox 360 output for XInput games
 - Best-effort Xbox rumble passthrough to Steam Controller haptics
 - Rumble enable/disable toggle
-- Back paddle mapping for L4, L5, R4, and R5
+- Full button remapping, including ABXY, bumpers, D-pad, stick clicks, View/Menu, Steam/Guide, and L4/L5/R4/R5
+- Per-button turbo toggles
 - Optional trackpad-as-mouse mode
 - Optional gyro-to-mouse mode
+- Start with Windows toggle
+- Automatic Steam handoff and reconnect attempts
 - Optional dark mode
 - Lizard mode disable while enabled
 - Lizard mode restore on normal shutdown
@@ -70,8 +73,6 @@ This is useful when Windows sees the controller but the bridge cannot find the l
 - No native Switch/DSU motion output yet
 - No trackpad-as-stick mapping yet
 - No HidHide integration yet
-- No startup option yet
-- No installer yet
 - Virtual output currently depends on ViGEmBus
 - Steam Controller haptics are implemented as best-effort rumble and may need tuning on real hardware
 
