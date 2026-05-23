@@ -14,10 +14,13 @@ internal static class KeyboardInput
         var input = new INPUT
         {
             type = INPUT_KEYBOARD,
-            ki = new KEYBDINPUT
+            u = new INPUTUNION
             {
-                wVk = virtualKey,
-                dwFlags = (down ? 0u : KEYEVENTF_KEYUP) | ExtendedFlag(virtualKey)
+                ki = new KEYBDINPUT
+                {
+                    wScan = (ushort)MapVirtualKey(virtualKey, MAPVK_VK_TO_VSC),
+                    dwFlags = KEYEVENTF_SCANCODE | (down ? 0u : KEYEVENTF_KEYUP) | ExtendedFlag(virtualKey)
+                }
             }
         };
 
@@ -37,6 +40,8 @@ internal static class KeyboardInput
     private const int INPUT_KEYBOARD = 1;
     private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
     private const uint KEYEVENTF_KEYUP = 0x0002;
+    private const uint KEYEVENTF_SCANCODE = 0x0008;
+    private const uint MAPVK_VK_TO_VSC = 0;
     private const ushort VK_INSERT = 0x2D;
     private const ushort VK_DELETE = 0x2E;
     private const ushort VK_HOME = 0x24;
@@ -55,10 +60,20 @@ internal static class KeyboardInput
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
+    [DllImport("user32.dll")]
+    private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
     [StructLayout(LayoutKind.Sequential)]
     private struct INPUT
     {
         public int type;
+        public INPUTUNION u;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct INPUTUNION
+    {
+        [FieldOffset(0)]
         public KEYBDINPUT ki;
     }
 

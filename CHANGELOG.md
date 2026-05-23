@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Switched keyboard mapping output to scan-code based input for better compatibility with apps and games.
+
 ## 0.5.0
 
 - Added a Keyboard tab for mapping controller buttons to keyboard keys.
