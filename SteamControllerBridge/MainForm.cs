@@ -20,10 +20,15 @@ internal sealed class MainForm : Form
     private readonly Button _applyPresetButton = new();
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly ComboBox _gyroActivationCombo = new();
+    private readonly ComboBox _gyroToggleCombo = new();
     private readonly ComboBox _gyroOutputCombo = new();
     private readonly TrackBar _gyroStickSensitivitySlider = new();
     private readonly Label _gyroStickSensitivityValue = new();
     private readonly NumericUpDown _gyroStickDeadZoneInput = new();
+    private readonly TrackBar _turboSpeedSlider = new();
+    private readonly Label _turboSpeedValue = new();
+    private readonly CheckBox _leftTriggerTurboCheck = new();
+    private readonly CheckBox _rightTriggerTurboCheck = new();
     private readonly CheckBox _trackpadMouseCheck = new();
     private readonly CheckBox _trackpadClickCheck = new();
     private readonly CheckBox _gyroMouseCheck = new();
@@ -205,6 +210,7 @@ internal sealed class MainForm : Form
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
         ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
+        ConfigureCombo(_gyroToggleCombo, Enum.GetValues<GyroToggleButton>());
 
         var tabs = new TabControl
         {
@@ -260,6 +266,8 @@ internal sealed class MainForm : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
 
         var row = 0;
+        AddTurboSpeedRow(layout, row++);
+        AddTriggerTurboRow(layout, row++);
         AddBindingPairRow(layout, row++, "A", PhysicalButton.A, "View", PhysicalButton.Back);
         AddBindingPairRow(layout, row++, "B", PhysicalButton.B, "Menu", PhysicalButton.Start);
         AddBindingPairRow(layout, row++, "X", PhysicalButton.X, "Steam", PhysicalButton.Guide);
@@ -282,19 +290,20 @@ internal sealed class MainForm : Form
         var layout = CreateFormLayout(2);
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var row = 0; row < 9; row++)
+        for (var row = 0; row < 10; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
         AddOptionRow(layout, 0, "Gyro output", _gyroOutputCombo);
-        AddGyroSensitivityRow(layout, 1);
-        AddNumericRow(layout, 2, "Gyro deadzone", _gyroStickDeadZoneInput, 0, 300);
-        AddOptionRow(layout, 3, "Mouse pad", _trackpadSourceCombo);
-        AddCheckRow(layout, 4, _trackpadMouseCheck, "Use trackpad as mouse");
-        AddCheckRow(layout, 5, _trackpadClickCheck, "Trackpad click is left click");
-        AddCheckRow(layout, 6, _startWithWindowsCheck, "Start with Windows");
-        AddCheckRow(layout, 7, _autoDisableForSteamCheck, "Back off when Steam opens");
+        AddOptionRow(layout, 1, "Gyro toggle", _gyroToggleCombo);
+        AddGyroSensitivityRow(layout, 2);
+        AddNumericRow(layout, 3, "Gyro deadzone", _gyroStickDeadZoneInput, 0, 300);
+        AddOptionRow(layout, 4, "Mouse pad", _trackpadSourceCombo);
+        AddCheckRow(layout, 5, _trackpadMouseCheck, "Use trackpad as mouse");
+        AddCheckRow(layout, 6, _trackpadClickCheck, "Trackpad click is left click");
+        AddCheckRow(layout, 7, _startWithWindowsCheck, "Start with Windows");
+        AddCheckRow(layout, 8, _autoDisableForSteamCheck, "Back off when Steam opens");
         tab.Controls.Add(layout);
         return tab;
     }
@@ -402,6 +411,71 @@ internal sealed class MainForm : Form
         layout.Controls.Add(text, column, row);
         layout.Controls.Add(combo, column + 1, row);
         layout.Controls.Add(turbo, column + 2, row);
+    }
+
+    private void AddTurboSpeedRow(TableLayoutPanel layout, int row)
+    {
+        var label = new Label
+        {
+            Text = "Turbo speed",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 9, 8, 0)
+        };
+
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
+
+        _turboSpeedSlider.Minimum = 25;
+        _turboSpeedSlider.Maximum = 500;
+        _turboSpeedSlider.TickFrequency = 50;
+        _turboSpeedSlider.SmallChange = 5;
+        _turboSpeedSlider.LargeChange = 25;
+        _turboSpeedSlider.Dock = DockStyle.Fill;
+        _turboSpeedSlider.ValueChanged += (_, _) =>
+        {
+            _turboSpeedValue.Text = $"{_turboSpeedSlider.Value} ms";
+            SaveOptionsFromUi();
+        };
+
+        _turboSpeedValue.AutoSize = true;
+        _turboSpeedValue.Anchor = AnchorStyles.Left;
+
+        panel.Controls.Add(_turboSpeedSlider, 0, 0);
+        panel.Controls.Add(_turboSpeedValue, 1, 0);
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+        layout.SetColumnSpan(panel, 5);
+    }
+
+    private void AddTriggerTurboRow(TableLayoutPanel layout, int row)
+    {
+        var label = new Label
+        {
+            Text = "Triggers",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 6, 8, 0)
+        };
+
+        var panel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = true };
+        _leftTriggerTurboCheck.Text = "LT Turbo";
+        _leftTriggerTurboCheck.AutoSize = true;
+        _leftTriggerTurboCheck.Margin = new Padding(0, 4, 16, 0);
+        _leftTriggerTurboCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
+        _rightTriggerTurboCheck.Text = "RT Turbo";
+        _rightTriggerTurboCheck.AutoSize = true;
+        _rightTriggerTurboCheck.Margin = new Padding(0, 4, 16, 0);
+        _rightTriggerTurboCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
+        panel.Controls.Add(_leftTriggerTurboCheck);
+        panel.Controls.Add(_rightTriggerTurboCheck);
+
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+        layout.SetColumnSpan(panel, 5);
     }
 
     private static TabPage CreateTab(string title)
@@ -519,9 +593,14 @@ internal sealed class MainForm : Form
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
         _presetCombo.SelectedItem = RemapPreset.DefaultXbox;
         _gyroOutputCombo.SelectedItem = _bridge.Options.GyroOutputMode;
+        _gyroToggleCombo.SelectedItem = _bridge.Options.GyroToggleButton;
         _gyroStickSensitivitySlider.Value = _bridge.Options.GyroStickSensitivity;
         _gyroStickSensitivityValue.Text = _bridge.Options.GyroStickSensitivity.ToString();
         _gyroStickDeadZoneInput.Value = _bridge.Options.GyroStickDeadZone;
+        _turboSpeedSlider.Value = _bridge.Options.TurboIntervalMs;
+        _turboSpeedValue.Text = $"{_bridge.Options.TurboIntervalMs} ms";
+        _leftTriggerTurboCheck.Checked = _bridge.Options.LeftTriggerTurbo;
+        _rightTriggerTurboCheck.Checked = _bridge.Options.RightTriggerTurbo;
         _gyroActivationCombo.SelectedItem = _bridge.Options.GyroMouseActivation;
         _trackpadMouseCheck.Checked = _bridge.Options.TrackpadMouseEnabled;
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
@@ -551,8 +630,12 @@ internal sealed class MainForm : Form
 
         _bridge.Options.TrackpadMouseSource = (TrackpadMouseSource)(_trackpadSourceCombo.SelectedItem ?? _bridge.Options.TrackpadMouseSource);
         _bridge.Options.GyroOutputMode = (GyroOutputMode)(_gyroOutputCombo.SelectedItem ?? _bridge.Options.GyroOutputMode);
+        _bridge.Options.GyroToggleButton = (GyroToggleButton)(_gyroToggleCombo.SelectedItem ?? _bridge.Options.GyroToggleButton);
         _bridge.Options.GyroStickSensitivity = _gyroStickSensitivitySlider.Value;
         _bridge.Options.GyroStickDeadZone = (int)_gyroStickDeadZoneInput.Value;
+        _bridge.Options.TurboIntervalMs = _turboSpeedSlider.Value;
+        _bridge.Options.LeftTriggerTurbo = _leftTriggerTurboCheck.Checked;
+        _bridge.Options.RightTriggerTurbo = _rightTriggerTurboCheck.Checked;
         _bridge.Options.GyroMouseActivation = (GyroMouseActivation)(_gyroActivationCombo.SelectedItem ?? _bridge.Options.GyroMouseActivation);
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;

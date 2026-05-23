@@ -30,9 +30,13 @@ internal sealed class BridgeOptions
     public bool TrackpadClickEnabled { get; set; } = true;
     public bool GyroMouseEnabled { get; set; }
     public GyroMouseActivation GyroMouseActivation { get; set; } = GyroMouseActivation.LeftTrigger;
+    public GyroToggleButton GyroToggleButton { get; set; } = GyroToggleButton.Disabled;
     public GyroOutputMode GyroOutputMode { get; set; } = GyroOutputMode.Mouse;
     public int GyroStickSensitivity { get; set; } = 26;
     public int GyroStickDeadZone { get; set; } = 45;
+    public int TurboIntervalMs { get; set; } = 80;
+    public bool LeftTriggerTurbo { get; set; }
+    public bool RightTriggerTurbo { get; set; }
     public bool RumbleEnabled { get; set; } = true;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
@@ -61,6 +65,7 @@ internal sealed class BridgeOptions
         MapR5 ??= new(ToGamepadButton(R5));
         GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
         GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
+        TurboIntervalMs = Math.Clamp(TurboIntervalMs, 25, 500);
     }
 
     public ButtonBinding GetBinding(PhysicalButton button)
@@ -119,6 +124,7 @@ internal sealed class BridgeOptions
         GyroMouseEnabled = false;
         GyroOutputMode = GyroOutputMode.Mouse;
         GyroMouseActivation = GyroMouseActivation.LeftTrigger;
+        GyroToggleButton = GyroToggleButton.Disabled;
 
         switch (preset)
         {
@@ -169,6 +175,8 @@ internal sealed class BridgeOptions
         SetBinding(MapL5, GamepadButton.X);
         SetBinding(MapR4, GamepadButton.B);
         SetBinding(MapR5, GamepadButton.A);
+        LeftTriggerTurbo = false;
+        RightTriggerTurbo = false;
     }
 
     private static void SetBinding(ButtonBinding binding, GamepadButton output)
@@ -282,6 +290,34 @@ internal enum GyroMouseActivation
     LeftPadTouch,
     RightPadTouch,
     Always
+}
+
+internal enum GyroToggleButton
+{
+    Disabled,
+    A,
+    B,
+    X,
+    Y,
+    LeftShoulder,
+    RightShoulder,
+    LeftThumb,
+    RightThumb,
+    Back,
+    Start,
+    Guide,
+    DPadUp,
+    DPadDown,
+    DPadLeft,
+    DPadRight,
+    L4,
+    L5,
+    R4,
+    R5,
+    LeftTrigger,
+    RightTrigger,
+    LeftPadTouch,
+    RightPadTouch
 }
 
 internal enum GyroOutputMode

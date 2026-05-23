@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3
+
+- Added a mappable gyro aim toggle button that can temporarily disable gyro while keeping the normal gyro activation trigger.
+- Added LT and RT turbo toggles.
+- Added a universal turbo speed slider.
+
 ## 0.4.2
 
 - Increased default gyro-to-right-stick strength.

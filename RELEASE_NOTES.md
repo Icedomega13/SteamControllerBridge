@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.4.2
+# Steam Controller Bridge v0.4.3
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -13,17 +13,20 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, and Desktop Mouse.
 - Includes a redesigned tabbed Advanced UI for presets, button remaps, motion, and logs.
 - Includes L4, L5, R4, and R5 as gyro activation options.
+- Includes a mappable gyro aim toggle button for temporarily disabling gyro aim.
 - Includes gyro stick speed and deadzone tuning controls.
+- Includes a universal turbo speed slider and trigger turbo toggles.
 - Includes optional trackpad-as-mouse mode.
 - Includes simple gyro mode with mouse or virtual right-stick output.
 - Includes optional rumble passthrough and a rumble toggle.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes dark mode and diagnostic logging.
 
-## Changes in 0.4.2
+## Changes in 0.4.3
 
-- Increased default gyro-to-right-stick output strength.
-- Added Motion-tab controls for gyro stick speed and deadzone.
+- Added a mappable gyro aim toggle button that can temporarily disable gyro while keeping the normal gyro activation trigger.
+- Added LT and RT turbo toggles.
+- Added a universal turbo speed slider.
 
 ## Requirements
 
@@ -50,5 +53,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.4.2.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.4.2.zip`
+- `SteamControllerBridgeSetup-0.4.3.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.4.3.zip`

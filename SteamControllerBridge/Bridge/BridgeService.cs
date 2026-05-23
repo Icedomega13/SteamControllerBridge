@@ -20,6 +20,8 @@ internal sealed class BridgeService : IDisposable
     private DateTime _nextReconnectAt = DateTime.MinValue;
     private bool _userWantsEnabled;
     private bool _steamBackoffActive;
+    private bool _gyroAllowed = true;
+    private bool _lastGyroTogglePressed;
 
     public event EventHandler<BridgeStatus>? StatusChanged;
     public event EventHandler<string>? LogWritten;
@@ -114,6 +116,8 @@ internal sealed class BridgeService : IDisposable
                 }
 
                 Log("Steam Controller connected.");
+                _gyroAllowed = true;
+                _lastGyroTogglePressed = false;
                 SetStatus(BridgeStatus.Working("Disabling lizard mode..."));
 
                 if (!_controller.DisableLizardMode())
@@ -201,11 +205,12 @@ internal sealed class BridgeService : IDisposable
                 }
 
                 var input = new SteamControllerInput(buffer.AsSpan(0, count));
-                _virtualController?.Update(input, Options);
+                UpdateGyroToggle(input);
+                _virtualController?.Update(input, Options, _gyroAllowed);
                 _mouse.Update(input, Options);
                 if (Options.GyroOutputMode == GyroOutputMode.Mouse)
                 {
-                    _gyroMouse.Update(input, Options);
+                    _gyroMouse.Update(input, Options, _gyroAllowed);
                 }
                 else
                 {
@@ -224,6 +229,56 @@ internal sealed class BridgeService : IDisposable
                 break;
             }
         }
+    }
+
+    private void UpdateGyroToggle(SteamControllerInput input)
+    {
+        if (Options.GyroToggleButton == GyroToggleButton.Disabled)
+        {
+            _gyroAllowed = true;
+            _lastGyroTogglePressed = false;
+            return;
+        }
+
+        var pressed = IsPressed(input, Options.GyroToggleButton);
+        if (pressed && !_lastGyroTogglePressed)
+        {
+            _gyroAllowed = !_gyroAllowed;
+            Log(_gyroAllowed ? "Gyro aim toggle enabled." : "Gyro aim toggle disabled.");
+        }
+
+        _lastGyroTogglePressed = pressed;
+    }
+
+    private static bool IsPressed(SteamControllerInput input, GyroToggleButton button)
+    {
+        return button switch
+        {
+            GyroToggleButton.A => input.A,
+            GyroToggleButton.B => input.B,
+            GyroToggleButton.X => input.X,
+            GyroToggleButton.Y => input.Y,
+            GyroToggleButton.LeftShoulder => input.LeftShoulder,
+            GyroToggleButton.RightShoulder => input.RightShoulder,
+            GyroToggleButton.LeftThumb => input.LeftThumb,
+            GyroToggleButton.RightThumb => input.RightThumb,
+            GyroToggleButton.Back => input.Back,
+            GyroToggleButton.Start => input.Start,
+            GyroToggleButton.Guide => input.Guide,
+            GyroToggleButton.DPadUp => input.DPadUp,
+            GyroToggleButton.DPadDown => input.DPadDown,
+            GyroToggleButton.DPadLeft => input.DPadLeft,
+            GyroToggleButton.DPadRight => input.DPadRight,
+            GyroToggleButton.L4 => input.L4,
+            GyroToggleButton.L5 => input.L5,
+            GyroToggleButton.R4 => input.R4,
+            GyroToggleButton.R5 => input.R5,
+            GyroToggleButton.LeftTrigger => input.LeftTriggerActive,
+            GyroToggleButton.RightTrigger => input.RightTriggerActive,
+            GyroToggleButton.LeftPadTouch => input.LeftPadTouched,
+            GyroToggleButton.RightPadTouch => input.RightPadTouched,
+            _ => false
+        };
     }
 
     private void BeginStopAfterFailure(string message)

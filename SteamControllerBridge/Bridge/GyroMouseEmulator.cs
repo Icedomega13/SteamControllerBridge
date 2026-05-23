@@ -9,9 +9,9 @@ internal sealed class GyroMouseEmulator
     private double _biasY;
     private double _biasZ;
 
-    public void Update(SteamControllerInput input, BridgeOptions options)
+    public void Update(SteamControllerInput input, BridgeOptions options, bool gyroAllowed)
     {
-        if (!options.GyroMouseEnabled || !input.HasGyro)
+        if (!gyroAllowed || !options.GyroMouseEnabled || !input.HasGyro)
         {
             Reset();
             return;
