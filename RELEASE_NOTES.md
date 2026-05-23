@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.4.3
+# Steam Controller Bridge v0.5.0
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -9,6 +9,7 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Handles known state report IDs `0x42` and `0x45`.
 - Disables lizard mode while enabled and restores it on shutdown.
 - Includes full button remapping for standard gamepad buttons and back paddles.
+- Includes keyboard key mapping for controller buttons, triggers, back paddles, and pad clicks.
 - Includes per-button turbo toggles for rapid-fire style presses.
 - Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, and Desktop Mouse.
 - Includes a redesigned tabbed Advanced UI for presets, button remaps, motion, and logs.
@@ -22,11 +23,12 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes dark mode and diagnostic logging.
 
-## Changes in 0.4.3
+## Changes in 0.5.0
 
-- Added a mappable gyro aim toggle button that can temporarily disable gyro while keeping the normal gyro activation trigger.
-- Added LT and RT turbo toggles.
-- Added a universal turbo speed slider.
+- Added a dedicated Keyboard tab with Set and Clear controls.
+- Added key capture for mapping controller controls to keyboard keys.
+- Added keyboard output support for normal buttons, triggers, back paddles, and pad clicks.
+- Added clean keyboard key release when the bridge stops or the controller disconnects.
 
 ## Requirements
 
@@ -53,5 +55,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.4.3.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.4.3.zip`
+- `SteamControllerBridgeSetup-0.5.0.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.5.0.zip`

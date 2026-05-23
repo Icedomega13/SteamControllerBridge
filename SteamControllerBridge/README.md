@@ -39,7 +39,7 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
   - Steam button as Guide
 - Passes Xbox rumble through to Steam Controller haptics on a best-effort basis.
 - Provides optional trackpad mouse mode.
-- Saves simple advanced options, including full button remapping, turbo toggles, startup, Steam handoff, and dark mode.
+- Saves simple advanced options, including full button remapping, keyboard mapping, turbo toggles, startup, Steam handoff, and dark mode.
 - Includes one-click remap presets and gyro output to mouse or virtual right stick.
 - Can back off when Steam starts and reconnect when Steam closes.
 - Restores lizard mode when turned off or when the app exits normally.

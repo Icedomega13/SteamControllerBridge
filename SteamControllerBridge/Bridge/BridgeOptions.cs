@@ -41,6 +41,7 @@ internal sealed class BridgeOptions
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
     public bool AutoDisableForSteam { get; set; } = true;
+    public Dictionary<string, int> KeyboardKeys { get; set; } = new();
 
     public void Normalize()
     {
@@ -63,9 +64,26 @@ internal sealed class BridgeOptions
         MapL5 ??= new(ToGamepadButton(L5));
         MapR4 ??= new(ToGamepadButton(R4));
         MapR5 ??= new(ToGamepadButton(R5));
+        KeyboardKeys ??= new Dictionary<string, int>();
         GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
         GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
         TurboIntervalMs = Math.Clamp(TurboIntervalMs, 25, 500);
+    }
+
+    public int GetKeyboardKey(ControllerInput input)
+    {
+        return KeyboardKeys.TryGetValue(input.ToString(), out var key) ? key : 0;
+    }
+
+    public void SetKeyboardKey(ControllerInput input, int key)
+    {
+        if (key <= 0)
+        {
+            KeyboardKeys.Remove(input.ToString());
+            return;
+        }
+
+        KeyboardKeys[input.ToString()] = key;
     }
 
     public ButtonBinding GetBinding(PhysicalButton button)
@@ -222,6 +240,33 @@ internal enum PhysicalButton
     L5,
     R4,
     R5
+}
+
+internal enum ControllerInput
+{
+    A,
+    B,
+    X,
+    Y,
+    LeftShoulder,
+    RightShoulder,
+    LeftThumb,
+    RightThumb,
+    Back,
+    Start,
+    Guide,
+    DPadUp,
+    DPadDown,
+    DPadLeft,
+    DPadRight,
+    L4,
+    L5,
+    R4,
+    R5,
+    LeftTrigger,
+    RightTrigger,
+    LeftPadClick,
+    RightPadClick
 }
 
 internal enum GamepadButton

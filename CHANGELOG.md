@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Added a Keyboard tab for mapping controller buttons to keyboard keys.
+- Added key capture and clear controls for normal buttons, triggers, back paddles, and pad clicks.
+- Keyboard mappings release cleanly when the bridge stops or the controller disconnects.
+
 ## 0.4.3
 
 - Added a mappable gyro aim toggle button that can temporarily disable gyro while keeping the normal gyro activation trigger.

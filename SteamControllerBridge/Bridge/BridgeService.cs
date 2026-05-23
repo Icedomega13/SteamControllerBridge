@@ -11,6 +11,7 @@ internal sealed class BridgeService : IDisposable
     private XboxVirtualController? _virtualController;
     private readonly MouseEmulator _mouse = new();
     private readonly GyroMouseEmulator _gyroMouse = new();
+    private readonly KeyboardEmulator _keyboard = new();
     private readonly object _rumbleGate = new();
     private byte _rumbleSmall;
     private byte _rumbleLarge;
@@ -180,6 +181,7 @@ internal sealed class BridgeService : IDisposable
         StopReadLoop();
         _mouse.Reset();
         _gyroMouse.Reset();
+        _keyboard.Reset();
         _controller?.SendRumble(0, 0);
         _virtualController?.Dispose();
         _virtualController = null;
@@ -207,6 +209,7 @@ internal sealed class BridgeService : IDisposable
                 var input = new SteamControllerInput(buffer.AsSpan(0, count));
                 UpdateGyroToggle(input);
                 _virtualController?.Update(input, Options, _gyroAllowed);
+                _keyboard.Update(input, Options);
                 _mouse.Update(input, Options);
                 if (Options.GyroOutputMode == GyroOutputMode.Mouse)
                 {
@@ -290,6 +293,7 @@ internal sealed class BridgeService : IDisposable
                 StopReadLoop();
                 _mouse.Reset();
                 _gyroMouse.Reset();
+                _keyboard.Reset();
                 _virtualController?.Dispose();
                 _virtualController = null;
                 CleanupController(restoreLizard: false);
@@ -419,5 +423,6 @@ internal sealed class BridgeService : IDisposable
     public void Dispose()
     {
         Stop();
+        _keyboard.Reset();
     }
 }

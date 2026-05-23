@@ -16,6 +16,7 @@ internal sealed class MainForm : Form
     private readonly Panel _advancedPanel = new();
     private readonly Dictionary<PhysicalButton, ComboBox> _buttonMapCombos = new();
     private readonly Dictionary<PhysicalButton, CheckBox> _turboChecks = new();
+    private readonly Dictionary<ControllerInput, TextBox> _keyboardKeyBoxes = new();
     private readonly ComboBox _presetCombo = new();
     private readonly Button _applyPresetButton = new();
     private readonly ComboBox _trackpadSourceCombo = new();
@@ -45,6 +46,7 @@ internal sealed class MainForm : Form
     private bool _updatingSwitch;
     private bool _updatingOptions;
     private bool _advancedVisible;
+    private ControllerInput? _capturingKeyboardInput;
 
     public MainForm()
     {
@@ -53,6 +55,7 @@ internal sealed class MainForm : Form
         MinimumSize = new Size(680, 460);
         Size = new Size(780, 560);
         Font = new Font("Segoe UI", 9F);
+        KeyPreview = true;
         _appIcon = LoadAppIcon();
         Icon = _appIcon;
 
@@ -222,6 +225,7 @@ internal sealed class MainForm : Form
 
         tabs.TabPages.Add(BuildPresetTab());
         tabs.TabPages.Add(BuildButtonsTab());
+        tabs.TabPages.Add(BuildKeyboardTab());
         tabs.TabPages.Add(BuildMotionTab());
         tabs.TabPages.Add(BuildLogsTab());
         _advancedPanel.Controls.Add(tabs);
@@ -278,6 +282,44 @@ internal sealed class MainForm : Form
         AddBindingPairRow(layout, row++, "R3", PhysicalButton.RightThumb, "L4", PhysicalButton.L4);
         AddBindingPairRow(layout, row++, "L5", PhysicalButton.L5, "R4", PhysicalButton.R4);
         AddBindingPairRow(layout, row, "R5", PhysicalButton.R5, string.Empty, null);
+
+        scroller.Controls.Add(layout);
+        tab.Controls.Add(scroller);
+        return tab;
+    }
+
+    private TabPage BuildKeyboardTab()
+    {
+        var tab = CreateTab("Keyboard");
+        var scroller = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+        var layout = new TableLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Dock = DockStyle.Top,
+            ColumnCount = 6,
+            Padding = new Padding(12)
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64));
+
+        var row = 0;
+        AddKeyboardPairRow(layout, row++, "A", ControllerInput.A, "View", ControllerInput.Back);
+        AddKeyboardPairRow(layout, row++, "B", ControllerInput.B, "Menu", ControllerInput.Start);
+        AddKeyboardPairRow(layout, row++, "X", ControllerInput.X, "Steam", ControllerInput.Guide);
+        AddKeyboardPairRow(layout, row++, "Y", ControllerInput.Y, "D-pad up", ControllerInput.DPadUp);
+        AddKeyboardPairRow(layout, row++, "LB", ControllerInput.LeftShoulder, "D-pad down", ControllerInput.DPadDown);
+        AddKeyboardPairRow(layout, row++, "RB", ControllerInput.RightShoulder, "D-pad left", ControllerInput.DPadLeft);
+        AddKeyboardPairRow(layout, row++, "LT", ControllerInput.LeftTrigger, "D-pad right", ControllerInput.DPadRight);
+        AddKeyboardPairRow(layout, row++, "RT", ControllerInput.RightTrigger, "L3", ControllerInput.LeftThumb);
+        AddKeyboardPairRow(layout, row++, "R3", ControllerInput.RightThumb, "L4", ControllerInput.L4);
+        AddKeyboardPairRow(layout, row++, "L5", ControllerInput.L5, "R4", ControllerInput.R4);
+        AddKeyboardPairRow(layout, row++, "R5", ControllerInput.R5, "Left pad", ControllerInput.LeftPadClick);
+        AddKeyboardPairRow(layout, row, "Right pad", ControllerInput.RightPadClick, string.Empty, null);
 
         scroller.Controls.Add(layout);
         tab.Controls.Add(scroller);
@@ -411,6 +453,69 @@ internal sealed class MainForm : Form
         layout.Controls.Add(text, column, row);
         layout.Controls.Add(combo, column + 1, row);
         layout.Controls.Add(turbo, column + 2, row);
+    }
+
+    private void AddKeyboardPairRow(TableLayoutPanel layout, int row, string leftLabel, ControllerInput leftInput, string rightLabel, ControllerInput? rightInput)
+    {
+        AddKeyboardCells(layout, row, 0, leftLabel, leftInput);
+        if (rightInput is not null)
+        {
+            AddKeyboardCells(layout, row, 3, rightLabel, rightInput.Value);
+        }
+    }
+
+    private void AddKeyboardCells(TableLayoutPanel layout, int row, int column, string label, ControllerInput input)
+    {
+        var text = new Label
+        {
+            Text = label,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 6, 8, 0)
+        };
+
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, AutoSize = true };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 56));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 58));
+
+        var keyBox = new TextBox
+        {
+            ReadOnly = true,
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 1, 6, 1),
+            TabStop = false
+        };
+        _keyboardKeyBoxes[input] = keyBox;
+
+        var setButton = new Button
+        {
+            Text = "Set",
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0, 0, 6, 0)
+        };
+        setButton.Click += (_, _) => BeginKeyboardCapture(input, keyBox);
+
+        var clearButton = new Button
+        {
+            Text = "Clear",
+            Dock = DockStyle.Fill,
+            Margin = new Padding(0)
+        };
+        clearButton.Click += (_, _) =>
+        {
+            _bridge.Options.SetKeyboardKey(input, 0);
+            keyBox.Text = string.Empty;
+            _bridge.SaveOptions();
+        };
+
+        panel.Controls.Add(keyBox, 0, 0);
+        panel.Controls.Add(setButton, 1, 0);
+        panel.Controls.Add(clearButton, 2, 0);
+
+        layout.Controls.Add(text, column, row);
+        layout.Controls.Add(panel, column + 1, row);
+        layout.SetColumnSpan(panel, 2);
     }
 
     private void AddTurboSpeedRow(TableLayoutPanel layout, int row)
@@ -588,6 +693,11 @@ internal sealed class MainForm : Form
             var binding = _bridge.Options.GetBinding(button);
             combo.SelectedItem = binding.Output;
             _turboChecks[button].Checked = binding.Turbo;
+        }
+
+        foreach (var (input, keyBox) in _keyboardKeyBoxes)
+        {
+            keyBox.Text = FormatKeyName(_bridge.Options.GetKeyboardKey(input));
         }
 
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
@@ -800,6 +910,51 @@ internal sealed class MainForm : Form
     private void AppendLog(string line)
     {
         _logBox.AppendText(line + Environment.NewLine);
+    }
+
+    private void BeginKeyboardCapture(ControllerInput input, TextBox keyBox)
+    {
+        _capturingKeyboardInput = input;
+        keyBox.Text = "Press a key...";
+        keyBox.Focus();
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        if (_capturingKeyboardInput is not { } input)
+        {
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        var keyCode = keyData & Keys.KeyCode;
+        if (keyCode == Keys.Escape)
+        {
+            _capturingKeyboardInput = null;
+            if (_keyboardKeyBoxes.TryGetValue(input, out var cancelBox))
+            {
+                cancelBox.Text = FormatKeyName(_bridge.Options.GetKeyboardKey(input));
+            }
+
+            return true;
+        }
+
+        if (keyCode != Keys.None)
+        {
+            _bridge.Options.SetKeyboardKey(input, (int)keyCode);
+            _bridge.SaveOptions();
+            if (_keyboardKeyBoxes.TryGetValue(input, out var keyBox))
+            {
+                keyBox.Text = FormatKeyName((int)keyCode);
+            }
+        }
+
+        _capturingKeyboardInput = null;
+        return true;
+    }
+
+    private static string FormatKeyName(int key)
+    {
+        return key <= 0 ? string.Empty : ((Keys)key).ToString();
     }
 
     private void ShowMainWindow()
