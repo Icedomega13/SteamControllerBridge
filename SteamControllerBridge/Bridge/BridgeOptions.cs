@@ -31,6 +31,8 @@ internal sealed class BridgeOptions
     public bool GyroMouseEnabled { get; set; }
     public GyroMouseActivation GyroMouseActivation { get; set; } = GyroMouseActivation.LeftTrigger;
     public GyroOutputMode GyroOutputMode { get; set; } = GyroOutputMode.Mouse;
+    public int GyroStickSensitivity { get; set; } = 26;
+    public int GyroStickDeadZone { get; set; } = 45;
     public bool RumbleEnabled { get; set; } = true;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
@@ -57,6 +59,8 @@ internal sealed class BridgeOptions
         MapL5 ??= new(ToGamepadButton(L5));
         MapR4 ??= new(ToGamepadButton(R4));
         MapR5 ??= new(ToGamepadButton(R5));
+        GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
+        GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
     }
 
     public ButtonBinding GetBinding(PhysicalButton button)

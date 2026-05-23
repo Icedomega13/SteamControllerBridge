@@ -21,6 +21,9 @@ internal sealed class MainForm : Form
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly ComboBox _gyroActivationCombo = new();
     private readonly ComboBox _gyroOutputCombo = new();
+    private readonly TrackBar _gyroStickSensitivitySlider = new();
+    private readonly Label _gyroStickSensitivityValue = new();
+    private readonly NumericUpDown _gyroStickDeadZoneInput = new();
     private readonly CheckBox _trackpadMouseCheck = new();
     private readonly CheckBox _trackpadClickCheck = new();
     private readonly CheckBox _gyroMouseCheck = new();
@@ -279,17 +282,19 @@ internal sealed class MainForm : Form
         var layout = CreateFormLayout(2);
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var row = 0; row < 7; row++)
+        for (var row = 0; row < 9; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
         AddOptionRow(layout, 0, "Gyro output", _gyroOutputCombo);
-        AddOptionRow(layout, 1, "Mouse pad", _trackpadSourceCombo);
-        AddCheckRow(layout, 2, _trackpadMouseCheck, "Use trackpad as mouse");
-        AddCheckRow(layout, 3, _trackpadClickCheck, "Trackpad click is left click");
-        AddCheckRow(layout, 4, _startWithWindowsCheck, "Start with Windows");
-        AddCheckRow(layout, 5, _autoDisableForSteamCheck, "Back off when Steam opens");
+        AddGyroSensitivityRow(layout, 1);
+        AddNumericRow(layout, 2, "Gyro deadzone", _gyroStickDeadZoneInput, 0, 300);
+        AddOptionRow(layout, 3, "Mouse pad", _trackpadSourceCombo);
+        AddCheckRow(layout, 4, _trackpadMouseCheck, "Use trackpad as mouse");
+        AddCheckRow(layout, 5, _trackpadClickCheck, "Trackpad click is left click");
+        AddCheckRow(layout, 6, _startWithWindowsCheck, "Start with Windows");
+        AddCheckRow(layout, 7, _autoDisableForSteamCheck, "Back off when Steam opens");
         tab.Controls.Add(layout);
         return tab;
     }
@@ -425,6 +430,60 @@ internal sealed class MainForm : Form
         layout.Controls.Add(checkBox, 1, row);
     }
 
+    private void AddGyroSensitivityRow(TableLayoutPanel layout, int row)
+    {
+        var label = new Label
+        {
+            Text = "Gyro stick speed",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 9, 8, 0)
+        };
+
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 46));
+
+        _gyroStickSensitivitySlider.Minimum = 1;
+        _gyroStickSensitivitySlider.Maximum = 80;
+        _gyroStickSensitivitySlider.TickFrequency = 10;
+        _gyroStickSensitivitySlider.SmallChange = 1;
+        _gyroStickSensitivitySlider.LargeChange = 5;
+        _gyroStickSensitivitySlider.Dock = DockStyle.Fill;
+        _gyroStickSensitivitySlider.ValueChanged += (_, _) =>
+        {
+            _gyroStickSensitivityValue.Text = _gyroStickSensitivitySlider.Value.ToString();
+            SaveOptionsFromUi();
+        };
+
+        _gyroStickSensitivityValue.AutoSize = true;
+        _gyroStickSensitivityValue.Anchor = AnchorStyles.Left;
+
+        panel.Controls.Add(_gyroStickSensitivitySlider, 0, 0);
+        panel.Controls.Add(_gyroStickSensitivityValue, 1, 0);
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+    }
+
+    private void AddNumericRow(TableLayoutPanel layout, int row, string labelText, NumericUpDown input, int minimum, int maximum)
+    {
+        var label = new Label
+        {
+            Text = labelText,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 9, 8, 0)
+        };
+
+        input.Minimum = minimum;
+        input.Maximum = maximum;
+        input.Width = 90;
+        input.ValueChanged += (_, _) => SaveOptionsFromUi();
+
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(input, 1, row);
+    }
+
     private ContextMenuStrip BuildTrayMenu()
     {
         var menu = new ContextMenuStrip();
@@ -460,6 +519,9 @@ internal sealed class MainForm : Form
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
         _presetCombo.SelectedItem = RemapPreset.DefaultXbox;
         _gyroOutputCombo.SelectedItem = _bridge.Options.GyroOutputMode;
+        _gyroStickSensitivitySlider.Value = _bridge.Options.GyroStickSensitivity;
+        _gyroStickSensitivityValue.Text = _bridge.Options.GyroStickSensitivity.ToString();
+        _gyroStickDeadZoneInput.Value = _bridge.Options.GyroStickDeadZone;
         _gyroActivationCombo.SelectedItem = _bridge.Options.GyroMouseActivation;
         _trackpadMouseCheck.Checked = _bridge.Options.TrackpadMouseEnabled;
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
@@ -489,6 +551,8 @@ internal sealed class MainForm : Form
 
         _bridge.Options.TrackpadMouseSource = (TrackpadMouseSource)(_trackpadSourceCombo.SelectedItem ?? _bridge.Options.TrackpadMouseSource);
         _bridge.Options.GyroOutputMode = (GyroOutputMode)(_gyroOutputCombo.SelectedItem ?? _bridge.Options.GyroOutputMode);
+        _bridge.Options.GyroStickSensitivity = _gyroStickSensitivitySlider.Value;
+        _bridge.Options.GyroStickDeadZone = (int)_gyroStickDeadZoneInput.Value;
         _bridge.Options.GyroMouseActivation = (GyroMouseActivation)(_gyroActivationCombo.SelectedItem ?? _bridge.Options.GyroMouseActivation);
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;

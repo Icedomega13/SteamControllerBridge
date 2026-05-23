@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- Increased default gyro-to-right-stick strength.
+- Added gyro stick speed and deadzone controls to the Motion tab.
+
 ## 0.4.1
 
 - Added L4, L5, R4, and R5 as gyro activation options.

@@ -9,9 +9,7 @@ internal sealed class XboxVirtualController : IDisposable
     private readonly ViGEmClient _client = new();
     private readonly IXbox360Controller _controller;
     private const int TurboIntervalMs = 80;
-    private const int GyroStickDeadZone = 120;
-    private const double GyroStickSensitivity = 1.15;
-    private const int GyroStickMax = 22000;
+    private const int GyroStickMax = 32767;
     private bool _gyroStickActive;
     private double _gyroStickBiasX;
     private double _gyroStickBiasZ;
@@ -72,8 +70,8 @@ internal sealed class XboxVirtualController : IDisposable
 
         var yaw = input.GyroZ - _gyroStickBiasZ;
         var pitch = input.GyroX - _gyroStickBiasX;
-        var gyroX = ApplyGyroStickDeadZone(-yaw);
-        var gyroY = ApplyGyroStickDeadZone(-pitch);
+        var gyroX = ApplyGyroStickDeadZone(-yaw, options);
+        var gyroY = ApplyGyroStickDeadZone(-pitch, options);
 
         rightX = AddAxis(rightX, gyroX);
         rightY = AddAxis(rightY, gyroY);
@@ -91,14 +89,14 @@ internal sealed class XboxVirtualController : IDisposable
         return (short)Math.Clamp(current + delta, short.MinValue, short.MaxValue);
     }
 
-    private static int ApplyGyroStickDeadZone(double value)
+    private static int ApplyGyroStickDeadZone(double value, BridgeOptions options)
     {
-        if (Math.Abs(value) < GyroStickDeadZone)
+        if (Math.Abs(value) < options.GyroStickDeadZone)
         {
             return 0;
         }
 
-        return (int)Math.Clamp(value * GyroStickSensitivity, -GyroStickMax, GyroStickMax);
+        return (int)Math.Clamp(value * options.GyroStickSensitivity, -GyroStickMax, GyroStickMax);
     }
 
     private static bool IsGyroActive(SteamControllerInput input, GyroMouseActivation activation)
