@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+- Redesigned the main window with a professional dark sidebar layout.
+- Added a larger status header and prominent On/Off control.
+- Reworked quick controls and advanced navigation to better match the app's feature set.
+- Added custom rounded panel styling and refreshed dark theme colors.
+
 ## 0.5.3
 
 - Fixed keyboard mapping SendInput structure sizing so Windows can accept mapped key events.

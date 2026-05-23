@@ -14,6 +14,11 @@ internal sealed class MainForm : Form
     private readonly TextBox _logBox = new();
     private readonly Button _advancedButton = new();
     private readonly Panel _advancedPanel = new();
+    private readonly Label _connectionLabel = new();
+    private readonly Label _sidebarStatusLabel = new();
+    private readonly Panel _statusDot = new();
+    private readonly Dictionary<string, Button> _navButtons = new();
+    private TabControl? _contentTabs;
     private readonly Dictionary<PhysicalButton, ComboBox> _buttonMapCombos = new();
     private readonly Dictionary<PhysicalButton, CheckBox> _turboChecks = new();
     private readonly Dictionary<ControllerInput, TextBox> _keyboardKeyBoxes = new();
@@ -52,8 +57,8 @@ internal sealed class MainForm : Form
     {
         Text = "Steam Controller Bridge";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(680, 460);
-        Size = new Size(780, 560);
+        MinimumSize = new Size(1120, 720);
+        Size = new Size(1240, 780);
         Font = new Font("Segoe UI", 9F);
         KeyPreview = true;
         _appIcon = LoadAppIcon();
@@ -93,39 +98,67 @@ internal sealed class MainForm : Form
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(22),
-            RowCount = 7,
+            Padding = new Padding(0),
+            RowCount = 1,
+            ColumnCount = 2
+        };
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 230));
+        root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+        var sidebar = BuildSidebar();
+        var main = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(28, 26, 28, 24),
+            RowCount = 3,
             ColumnCount = 1
         };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        main.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
+        var header = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            ColumnCount = 2,
+            Margin = new Padding(0, 0, 0, 24)
+        };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250));
+
+        var titleStack = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false
+        };
         var title = new Label
         {
             Text = "Steam Controller Bridge",
-            Font = new Font(Font.FontFamily, 18, FontStyle.Bold),
+            Font = new Font(Font.FontFamily, 22, FontStyle.Bold),
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 14)
+            Margin = new Padding(0, 0, 0, 8)
         };
-
-        _statusLabel.Font = new Font(Font.FontFamily, 11, FontStyle.Bold);
+        _statusLabel.Font = new Font(Font.FontFamily, 12, FontStyle.Bold);
         _statusLabel.AutoSize = true;
-        _statusLabel.Margin = new Padding(0, 0, 0, 4);
+        _statusLabel.Margin = new Padding(0, 0, 0, 6);
 
         _detailLabel.AutoSize = true;
-        _detailLabel.Margin = new Padding(0, 0, 0, 20);
+        _detailLabel.Margin = new Padding(0);
+        titleStack.Controls.Add(title);
+        titleStack.Controls.Add(_statusLabel);
+        titleStack.Controls.Add(_detailLabel);
 
         _enableSwitch.Text = "Off";
         _enableSwitch.Appearance = Appearance.Button;
         _enableSwitch.TextAlign = ContentAlignment.MiddleCenter;
-        _enableSwitch.Font = new Font(Font.FontFamily, 12, FontStyle.Bold);
-        _enableSwitch.Height = 52;
-        _enableSwitch.Dock = DockStyle.Top;
+        _enableSwitch.Font = new Font(Font.FontFamily, 18, FontStyle.Bold);
+        _enableSwitch.Width = 220;
+        _enableSwitch.Height = 82;
+        _enableSwitch.Dock = DockStyle.Right;
+        _enableSwitch.Margin = new Padding(0);
         _enableSwitch.FlatStyle = FlatStyle.Flat;
         _enableSwitch.FlatAppearance.BorderSize = 0;
         _enableSwitch.CheckedChanged += (_, _) =>
@@ -144,27 +177,154 @@ internal sealed class MainForm : Form
                 StopBridgeAsync();
             }
         };
+        header.Controls.Add(titleStack, 0, 0);
+        header.Controls.Add(_enableSwitch, 1, 0);
 
         BuildQuickOptions();
+        _quickOptionsPanel.Padding = new Padding(18, 14, 18, 14);
+        _quickOptionsPanel.Margin = new Padding(0, 0, 0, 22);
 
-        _advancedButton.Text = "Advanced";
-        _advancedButton.AutoSize = true;
-        _advancedButton.Margin = new Padding(0, 10, 0, 8);
+        _advancedButton.Text = "Hide advanced";
+        _advancedButton.AutoSize = false;
+        _advancedButton.Width = 140;
+        _advancedButton.Height = 34;
+        _advancedButton.Margin = new Padding(14, 0, 0, 0);
         _advancedButton.FlatStyle = FlatStyle.Flat;
         _advancedButton.FlatAppearance.BorderSize = 0;
         _advancedButton.Click += (_, _) => ToggleAdvanced();
+        _quickOptionsPanel.Controls.Add(_advancedButton);
 
         BuildAdvancedPanel();
+        _advancedPanel.Visible = true;
+        _advancedVisible = true;
 
-        root.Controls.Add(title, 0, 0);
-        root.Controls.Add(_statusLabel, 0, 1);
-        root.Controls.Add(_detailLabel, 0, 2);
-        root.Controls.Add(_enableSwitch, 0, 3);
-        root.Controls.Add(_quickOptionsPanel, 0, 4);
-        root.Controls.Add(_advancedButton, 0, 5);
-        root.Controls.Add(_advancedPanel, 0, 6);
+        main.Controls.Add(header, 0, 0);
+        main.Controls.Add(_quickOptionsPanel, 0, 1);
+        main.Controls.Add(_advancedPanel, 0, 2);
 
+        root.Controls.Add(sidebar, 0, 0);
+        root.Controls.Add(main, 1, 0);
         Controls.Add(root);
+    }
+
+    private Panel BuildSidebar()
+    {
+        var sidebar = new Panel
+        {
+            Dock = DockStyle.Fill,
+            Padding = new Padding(18, 24, 16, 24)
+        };
+
+        var iconPanel = new Panel
+        {
+            Width = 104,
+            Height = 104,
+            Left = 45,
+            Top = 24
+        };
+        iconPanel.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var fill = new SolidBrush(Color.FromArgb(36, 119, 96));
+            using var pen = new Pen(Color.FromArgb(95, 242, 186), 2);
+            e.Graphics.FillRoundedRectangle(fill, new Rectangle(10, 10, 84, 84), 18);
+            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(10, 10, 84, 84), 18);
+            using var font = new Font("Segoe UI Symbol", 34, FontStyle.Regular);
+            using var brush = new SolidBrush(Color.FromArgb(103, 255, 196));
+            e.Graphics.DrawString("◇", font, brush, 34, 28);
+        };
+        sidebar.Controls.Add(iconPanel);
+
+        var nav = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Width = 196,
+            Height = 360,
+            Left = 16,
+            Top = 168
+        };
+
+        AddNavButton(nav, "Presets", 0);
+        AddNavButton(nav, "Buttons", 1);
+        AddNavButton(nav, "Keyboard", 2);
+        AddNavButton(nav, "Motion", 3);
+        AddNavButton(nav, "Logs", 4);
+        sidebar.Controls.Add(nav);
+
+        var statusCard = new Panel
+        {
+            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
+            Width = 196,
+            Height = 92,
+            Left = 16,
+            Top = 560
+        };
+        statusCard.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var fill = new SolidBrush(Color.FromArgb(23, 35, 53));
+            using var pen = new Pen(Color.FromArgb(45, 68, 96));
+            e.Graphics.FillRoundedRectangle(fill, new Rectangle(0, 0, statusCard.Width - 1, statusCard.Height - 1), 8);
+            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, statusCard.Width - 1, statusCard.Height - 1), 8);
+        };
+        sidebar.Resize += (_, _) => statusCard.Top = sidebar.ClientSize.Height - 116;
+
+        _connectionLabel.Text = "Virtual Xbox controller";
+        _connectionLabel.AutoSize = false;
+        _connectionLabel.Width = 140;
+        _connectionLabel.Height = 38;
+        _connectionLabel.Left = 14;
+        _connectionLabel.Top = 14;
+        _connectionLabel.Font = new Font(Font.FontFamily, 9, FontStyle.Regular);
+        _sidebarStatusLabel.Text = "Disconnected";
+        _sidebarStatusLabel.AutoSize = true;
+        _sidebarStatusLabel.Left = 14;
+        _sidebarStatusLabel.Top = 58;
+        _sidebarStatusLabel.Font = new Font(Font.FontFamily, 9, FontStyle.Bold);
+        _statusDot.Width = 9;
+        _statusDot.Height = 9;
+        _statusDot.Left = 170;
+        _statusDot.Top = 22;
+        _statusDot.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var brush = new SolidBrush(_bridge.Status.IsEnabled ? Color.FromArgb(90, 250, 178) : Color.FromArgb(110, 126, 148));
+            e.Graphics.FillEllipse(brush, 0, 0, 8, 8);
+        };
+        statusCard.Controls.Add(_connectionLabel);
+        statusCard.Controls.Add(_sidebarStatusLabel);
+        statusCard.Controls.Add(_statusDot);
+        sidebar.Controls.Add(statusCard);
+
+        return sidebar;
+    }
+
+    private void AddNavButton(FlowLayoutPanel nav, string text, int tabIndex)
+    {
+        var button = new Button
+        {
+            Text = text,
+            Width = 196,
+            Height = 48,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(18, 0, 0, 0),
+            Margin = new Padding(0, 0, 0, 10),
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font(Font.FontFamily, 10, FontStyle.Regular),
+            Tag = tabIndex
+        };
+        button.FlatAppearance.BorderSize = 0;
+        button.Click += (_, _) =>
+        {
+            if (_contentTabs is not null)
+            {
+                _contentTabs.SelectedIndex = tabIndex;
+                HighlightNav(tabIndex);
+            }
+        };
+        _navButtons[text] = button;
+        nav.Controls.Add(button);
     }
 
     private void BuildQuickOptions()
@@ -173,6 +333,14 @@ internal sealed class MainForm : Form
         _quickOptionsPanel.Dock = DockStyle.Top;
         _quickOptionsPanel.Margin = new Padding(0, 12, 0, 0);
         _quickOptionsPanel.WrapContents = true;
+        _quickOptionsPanel.Paint += (_, e) =>
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var fill = new SolidBrush(Color.FromArgb(18, 31, 49));
+            using var pen = new Pen(Color.FromArgb(41, 63, 91));
+            e.Graphics.FillRoundedRectangle(fill, new Rectangle(0, 0, _quickOptionsPanel.Width - 1, _quickOptionsPanel.Height - 1), 10);
+            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, _quickOptionsPanel.Width - 1, _quickOptionsPanel.Height - 1), 10);
+        };
 
         _rumbleCheck.Text = "Enable rumble";
         _rumbleCheck.AutoSize = true;
@@ -222,12 +390,15 @@ internal sealed class MainForm : Form
             Padding = new Point(12, 5),
             Margin = new Padding(0)
         };
+        _contentTabs = tabs;
 
         tabs.TabPages.Add(BuildPresetTab());
         tabs.TabPages.Add(BuildButtonsTab());
         tabs.TabPages.Add(BuildKeyboardTab());
         tabs.TabPages.Add(BuildMotionTab());
         tabs.TabPages.Add(BuildLogsTab());
+        tabs.SelectedIndexChanged += (_, _) => HighlightNav(tabs.SelectedIndex);
+        tabs.SelectedIndex = 1;
         _advancedPanel.Controls.Add(tabs);
     }
 
@@ -800,37 +971,44 @@ internal sealed class MainForm : Form
         _advancedVisible = !_advancedVisible;
         _advancedPanel.Visible = _advancedVisible;
         _advancedButton.Text = _advancedVisible ? "Hide advanced" : "Advanced";
-        Height = _advancedVisible ? 640 : 360;
     }
 
     private void ApplyTheme()
     {
-        var dark = _darkModeCheck.Checked;
-        var back = dark ? Color.FromArgb(18, 22, 28) : Color.FromArgb(244, 247, 250);
-        var panel = dark ? Color.FromArgb(28, 34, 43) : Color.White;
-        var fore = dark ? Color.FromArgb(238, 238, 238) : SystemColors.ControlText;
-        var muted = dark ? Color.FromArgb(170, 178, 188) : Color.FromArgb(92, 101, 112);
-        var accent = dark ? Color.FromArgb(75, 195, 255) : Color.FromArgb(0, 116, 217);
-        var button = dark ? Color.FromArgb(43, 52, 64) : Color.FromArgb(226, 236, 246);
-        var success = dark ? Color.FromArgb(24, 135, 94) : Color.FromArgb(0, 153, 102);
+        var back = Color.FromArgb(7, 18, 33);
+        var panel = Color.FromArgb(15, 28, 46);
+        var input = Color.FromArgb(20, 35, 55);
+        var fore = Color.FromArgb(239, 246, 255);
+        var muted = Color.FromArgb(151, 167, 190);
+        var accent = Color.FromArgb(91, 244, 183);
+        var button = Color.FromArgb(24, 43, 66);
+        var success = Color.FromArgb(30, 158, 106);
+        var disabled = Color.FromArgb(43, 54, 72);
 
         BackColor = back;
         ForeColor = fore;
-        ApplyThemeToControls(Controls, back, panel, fore, button, accent);
+        ApplyThemeToControls(Controls, back, panel, input, fore, button, accent);
         _detailLabel.ForeColor = muted;
+        _statusLabel.ForeColor = _bridge.Status.HasError ? Color.FromArgb(255, 178, 111) : _bridge.Status.IsEnabled ? accent : muted;
+        _connectionLabel.ForeColor = fore;
+        _sidebarStatusLabel.ForeColor = _bridge.Status.IsEnabled ? accent : muted;
+        _statusDot.Invalidate();
         _logBox.BackColor = panel;
         _logBox.ForeColor = fore;
         _logBox.BorderStyle = BorderStyle.None;
-        _enableSwitch.BackColor = _bridge.Status.IsEnabled ? success : button;
+        _enableSwitch.BackColor = _bridge.Status.IsEnabled ? success : disabled;
         _enableSwitch.ForeColor = _bridge.Status.IsEnabled ? Color.White : fore;
         _advancedButton.BackColor = button;
         _advancedButton.ForeColor = fore;
+        _quickOptionsPanel.Invalidate();
+        HighlightNav(_contentTabs?.SelectedIndex ?? 1);
     }
 
     private static void ApplyThemeToControls(
         Control.ControlCollection controls,
         Color back,
         Color panel,
+        Color input,
         Color fore,
         Color button,
         Color accent)
@@ -840,8 +1018,12 @@ internal sealed class MainForm : Form
             control.ForeColor = fore;
             control.BackColor = control switch
             {
-                TextBox or ComboBox or TabPage => panel,
+                TextBox or ComboBox or NumericUpDown => input,
+                TabPage => back,
                 Button => button,
+                FlowLayoutPanel or TableLayoutPanel => back,
+                Panel => panel,
+                TabControl => back,
                 _ => back
             };
 
@@ -851,15 +1033,31 @@ internal sealed class MainForm : Form
                 buttonControl.FlatAppearance.BorderSize = 0;
             }
 
-            if (control is TabControl tabControl)
+            if (control is ComboBox comboBox)
             {
-                tabControl.BackColor = panel;
+                comboBox.FlatStyle = FlatStyle.Flat;
+            }
+
+            if (control is CheckBox checkBox)
+            {
+                checkBox.FlatStyle = FlatStyle.Flat;
             }
 
             if (control.HasChildren)
             {
-                ApplyThemeToControls(control.Controls, back, panel, fore, button, accent);
+                ApplyThemeToControls(control.Controls, back, panel, input, fore, button, accent);
             }
+        }
+    }
+
+    private void HighlightNav(int selectedIndex)
+    {
+        foreach (var button in _navButtons.Values)
+        {
+            var active = button.Tag is int index && index == selectedIndex;
+            button.BackColor = active ? Color.FromArgb(31, 112, 89) : Color.FromArgb(7, 18, 33);
+            button.ForeColor = active ? Color.FromArgb(114, 255, 202) : Color.FromArgb(203, 214, 231);
+            button.FlatAppearance.MouseOverBackColor = active ? Color.FromArgb(35, 126, 100) : Color.FromArgb(18, 31, 49);
         }
     }
 
@@ -999,5 +1197,32 @@ internal sealed class MainForm : Form
     {
         var icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         return icon ?? SystemIcons.Application;
+    }
+}
+
+internal static class GraphicsExtensions
+{
+    public static void FillRoundedRectangle(this Graphics graphics, Brush brush, Rectangle bounds, int radius)
+    {
+        using var path = CreateRoundedRectangle(bounds, radius);
+        graphics.FillPath(brush, path);
+    }
+
+    public static void DrawRoundedRectangle(this Graphics graphics, Pen pen, Rectangle bounds, int radius)
+    {
+        using var path = CreateRoundedRectangle(bounds, radius);
+        graphics.DrawPath(pen, path);
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
+    {
+        var diameter = radius * 2;
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
+        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }
