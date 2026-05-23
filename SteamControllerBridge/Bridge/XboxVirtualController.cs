@@ -107,6 +107,10 @@ internal sealed class XboxVirtualController : IDisposable
         {
             GyroMouseActivation.LeftTrigger => input.LeftTriggerActive,
             GyroMouseActivation.RightTrigger => input.RightTriggerActive,
+            GyroMouseActivation.L4 => input.L4,
+            GyroMouseActivation.L5 => input.L5,
+            GyroMouseActivation.R4 => input.R4,
+            GyroMouseActivation.R5 => input.R5,
             GyroMouseActivation.LeftPadTouch => input.LeftPadTouched,
             GyroMouseActivation.RightPadTouch => input.RightPadTouched,
             GyroMouseActivation.Always => true,

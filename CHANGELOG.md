@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Added L4, L5, R4, and R5 as gyro activation options.
+
 ## 0.4.0
 
 - Redesigned the main window with a cleaner modern layout.

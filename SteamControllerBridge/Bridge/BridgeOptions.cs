@@ -271,6 +271,10 @@ internal enum GyroMouseActivation
 {
     LeftTrigger,
     RightTrigger,
+    L4,
+    L5,
+    R4,
+    R5,
     LeftPadTouch,
     RightPadTouch,
     Always
