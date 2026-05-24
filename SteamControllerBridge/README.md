@@ -16,7 +16,7 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.7.0.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.7.1.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
 6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
@@ -42,6 +42,7 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
 - Per-button turbo toggles
 - One-click remap presets, including Nintendo swap, FPS gyro options, and Old School FPS
 - Saveable profiles with import/export support for sharing layouts
+- Centered logo header with icon-only sidebar navigation
 - Optional trackpad-as-mouse mode
 - Optional gyro output to mouse or the virtual right stick
 - Optional left-stick WASD and right-stick mouse mode for older keyboard-and-mouse-only games

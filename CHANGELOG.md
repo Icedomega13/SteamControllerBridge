@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+- Replaced the text header with the centered Steam Controller Bridge logo.
+- Switched sidebar navigation to icon-only buttons with active page titles in the main panel.
+- Added the new transparent active/inactive navigation icon set.
+- Aligned the controller connect icon with the navigation column.
+- Removed the visible rectangular hover highlight from sidebar navigation.
+
 ## 0.7.0
 
 - Added saveable preset profiles with load, import, export, and delete controls.

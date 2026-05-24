@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.7.0
+# Steam Controller Bridge v0.7.1
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -15,6 +15,7 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, Desktop Mouse, and Old School FPS.
 - Includes saveable profiles with import/export support for sharing layouts.
 - Includes a redesigned tabbed Advanced UI for presets, button remaps, motion, and logs.
+- Includes a centered logo header and icon-only sidebar navigation.
 - Includes L4, L5, R4, and R5 as gyro activation options.
 - Includes a mappable gyro aim toggle button for temporarily disabling gyro aim.
 - Includes gyro stick speed and deadzone tuning controls.
@@ -26,13 +27,13 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes diagnostic logging.
 
-## Changes in 0.7.0
+## Changes in 0.7.1
 
-- Added saveable preset profiles with load, import, export, and delete controls.
-- Added an Old School FPS preset for games without controller support.
-- Added left-stick WASD output, right-stick mouse aiming, mouse speed, and vertical invert controls.
-- Suppressed virtual stick output when stick-to-keyboard or stick-to-mouse modes are enabled.
-- Added Valve `0x1303` HID support for controllers that expose the Bluetooth-style product ID.
+- Replaced the text header with the centered Steam Controller Bridge logo.
+- Switched sidebar navigation to icon-only buttons with active page titles in the main panel.
+- Added the new transparent active/inactive navigation icon set.
+- Aligned the controller connect icon with the navigation column.
+- Removed the visible rectangular hover highlight from sidebar navigation.
 
 ## Requirements
 
@@ -59,5 +60,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.7.0.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.7.0.zip`
+- `SteamControllerBridgeSetup-0.7.1.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.7.1.zip`

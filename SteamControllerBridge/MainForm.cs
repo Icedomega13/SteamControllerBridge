@@ -21,6 +21,8 @@ internal sealed class MainForm : Form
     private readonly Label _sidebarStatusLabel = new();
     private readonly Panel _statusDot = new();
     private readonly PictureBox _controllerPowerImage = new();
+    private readonly PictureBox _logoImage = new();
+    private readonly Label _pageTitleLabel = new();
     private readonly ToolTip _toolTip = new();
     private readonly Dictionary<string, Button> _navButtons = new();
     private readonly Dictionary<int, Image> _navActiveImages = new();
@@ -69,6 +71,7 @@ internal sealed class MainForm : Form
     private readonly Icon _appIcon;
     private readonly Image? _controllerOnImage;
     private readonly Image? _controllerOffImage;
+    private readonly Image? _logoAsset;
     private bool _updatingOptions;
     private ControllerInput? _capturingKeyboardInput;
 
@@ -84,6 +87,7 @@ internal sealed class MainForm : Form
         Icon = _appIcon;
         _controllerOnImage = LoadSoftImageAsset("ControllerON.png");
         _controllerOffImage = LoadSoftImageAsset("ControllerOFF.png");
+        _logoAsset = LoadImageAsset("Logo.png");
         LoadNavigationImages();
 
         _trayIcon = new NotifyIcon
@@ -111,6 +115,7 @@ internal sealed class MainForm : Form
             _appIcon.Dispose();
             _controllerOnImage?.Dispose();
             _controllerOffImage?.Dispose();
+            _logoAsset?.Dispose();
             foreach (var image in _navActiveImages.Values.Concat(_navInactiveImages.Values))
             {
                 image.Dispose();
@@ -152,49 +157,104 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Top,
             AutoSize = true,
             ColumnCount = 1,
-            Margin = new Padding(0, 0, 0, 24)
+            Margin = new Padding(0, 0, 0, 18)
         };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         var titleStack = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top,
+            Anchor = AnchorStyles.None,
             AutoSize = true,
             FlowDirection = FlowDirection.TopDown,
-            WrapContents = false
+            WrapContents = false,
+            Margin = new Padding(0)
         };
-        var title = new Label
+        _logoImage.Image = _logoAsset;
+        _logoImage.Width = 620;
+        _logoImage.Height = 132;
+        _logoImage.Margin = new Padding(0, 0, 0, 8);
+        _logoImage.SizeMode = PictureBoxSizeMode.Zoom;
+        _logoImage.BackColor = Color.Transparent;
+        _logoImage.Anchor = AnchorStyles.None;
+
+        var statusStack = new FlowLayoutPanel
         {
-            Text = "Steam Controller Bridge",
-            Font = new Font(Font.FontFamily, 22, FontStyle.Bold),
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 8)
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Anchor = AnchorStyles.None,
+            Margin = new Padding(0)
         };
-        _statusLabel.Font = new Font(Font.FontFamily, 12, FontStyle.Bold);
+        statusStack.Controls.Add(_statusLabel);
+        statusStack.Controls.Add(_detailLabel);
+
+        _statusLabel.Font = new Font(Font.FontFamily, 11, FontStyle.Bold);
+        _statusLabel.TextAlign = ContentAlignment.MiddleCenter;
+        _statusLabel.Anchor = AnchorStyles.None;
         _statusLabel.AutoSize = true;
-        _statusLabel.Margin = new Padding(0, 0, 0, 6);
+        _statusLabel.Margin = new Padding(0, 0, 0, 4);
 
         _detailLabel.AutoSize = true;
+        _detailLabel.TextAlign = ContentAlignment.MiddleCenter;
+        _detailLabel.Anchor = AnchorStyles.None;
         _detailLabel.Margin = new Padding(0);
-        titleStack.Controls.Add(title);
-        titleStack.Controls.Add(_statusLabel);
-        titleStack.Controls.Add(_detailLabel);
+
+        titleStack.Controls.Add(_logoImage);
+        titleStack.Controls.Add(statusStack);
 
         header.Controls.Add(titleStack, 0, 0);
 
+        _pageTitleLabel.Text = GetPageTitle(_selectedPageIndex);
+        _pageTitleLabel.Font = new Font(Font.FontFamily, 16, FontStyle.Bold);
+        _pageTitleLabel.TextAlign = ContentAlignment.MiddleCenter;
+        _pageTitleLabel.Dock = DockStyle.Top;
+        _pageTitleLabel.Height = 42;
+        _pageTitleLabel.Margin = new Padding(0, 0, 0, 12);
+        _pageTitleLabel.BackColor = Color.Transparent;
+        _pageTitleLabel.AutoSize = false;
+
+        var titleSpacer = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 54,
+            Margin = new Padding(0, 0, 0, 0)
+        };
+        titleSpacer.Controls.Add(_pageTitleLabel);
+
         BuildQuickOptions();
-        _quickOptionsPanel.Margin = new Padding(0, 0, 0, 22);
+        _quickOptionsPanel.Margin = new Padding(0, 0, 0, 0);
 
         BuildAdvancedPanel();
         _advancedPanel.Visible = true;
 
+        main.RowCount = 4;
+        main.RowStyles.Clear();
+        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        main.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
         main.Controls.Add(header, 0, 0);
         main.Controls.Add(_quickOptionsPanel, 0, 1);
-        main.Controls.Add(_advancedPanel, 0, 2);
+        main.Controls.Add(titleSpacer, 0, 2);
+        main.Controls.Add(_advancedPanel, 0, 3);
 
         root.Controls.Add(sidebar, 0, 0);
         root.Controls.Add(main, 1, 0);
         Controls.Add(root);
+    }
+
+    private static string GetPageTitle(int pageIndex)
+    {
+        return pageIndex switch
+        {
+            0 => "Presets",
+            1 => "Buttons",
+            2 => "Keyboard",
+            3 => "Motion",
+            4 => "Logs",
+            _ => "Presets"
+        };
     }
 
     private Panel BuildSidebar()
@@ -205,7 +265,7 @@ internal sealed class MainForm : Form
 
         _controllerPowerPanel.Width = 120;
         _controllerPowerPanel.Height = 120;
-        _controllerPowerPanel.Left = 37;
+        _controllerPowerPanel.Left = 55;
         _controllerPowerPanel.Top = 18;
         _controllerPowerPanel.BackColor = Color.FromArgb(7, 18, 33);
 
@@ -222,9 +282,9 @@ internal sealed class MainForm : Form
 
         _sidebarNavPanel.FlowDirection = FlowDirection.TopDown;
         _sidebarNavPanel.WrapContents = false;
-        _sidebarNavPanel.Width = 196;
+        _sidebarNavPanel.Width = 120;
         _sidebarNavPanel.Height = 430;
-        _sidebarNavPanel.Left = 16;
+        _sidebarNavPanel.Left = 55;
         _sidebarNavPanel.Top = 168;
         _sidebarNavPanel.BackColor = Color.FromArgb(7, 18, 33);
 
@@ -285,21 +345,21 @@ internal sealed class MainForm : Form
     {
         var button = new Button
         {
-            Text = text,
+            Text = string.Empty,
             Name = text,
-            Width = 196,
+            Width = 120,
             Height = 72,
-            TextAlign = ContentAlignment.MiddleLeft,
+            TextAlign = ContentAlignment.MiddleCenter,
             Padding = new Padding(0),
-            Margin = new Padding(0, 0, 0, 12),
+            Margin = new Padding(0, 0, 0, 14),
             FlatStyle = FlatStyle.Flat,
             Font = new Font(Font.FontFamily, 10, FontStyle.Bold),
-            BackgroundImageLayout = ImageLayout.Stretch,
+            BackgroundImageLayout = ImageLayout.Zoom,
             Tag = tabIndex
         };
         button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(24, 48, 68);
-        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(18, 31, 49);
+        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(7, 18, 33);
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(7, 18, 33);
         _toolTip.SetToolTip(button, text);
         button.Click += (_, _) =>
         {
@@ -415,6 +475,7 @@ internal sealed class MainForm : Form
         }
 
         _selectedPageIndex = selectedIndex;
+        _pageTitleLabel.Text = GetPageTitle(selectedIndex);
         HighlightNav(selectedIndex);
     }
 
@@ -1211,6 +1272,7 @@ internal sealed class MainForm : Form
         ApplyThemeToControls(Controls, back, panel, input, fore, button, accent);
         _detailLabel.ForeColor = muted;
         _statusLabel.ForeColor = _bridge.Status.HasError ? Color.FromArgb(255, 178, 111) : _bridge.Status.IsEnabled ? accent : muted;
+        _pageTitleLabel.ForeColor = accent;
         _connectionLabel.ForeColor = fore;
         _sidebarStatusLabel.ForeColor = _bridge.Status.IsEnabled ? accent : muted;
         _statusDot.Invalidate();
@@ -1284,10 +1346,11 @@ internal sealed class MainForm : Form
                 : _navInactiveImages.TryGetValue(tabIndex, out navImage);
 
             button.BackgroundImage = hasImage ? navImage : null;
-            button.Text = hasImage ? string.Empty : button.Name;
+            button.Text = string.Empty;
             button.BackColor = Color.FromArgb(7, 18, 33);
             button.ForeColor = active ? Color.FromArgb(114, 255, 202) : Color.FromArgb(226, 234, 246);
-            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(13, 28, 47);
+            button.FlatAppearance.MouseDownBackColor = Color.FromArgb(7, 18, 33);
+            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(7, 18, 33);
         }
     }
 
@@ -1448,11 +1511,11 @@ internal sealed class MainForm : Form
 
     private void LoadNavigationImages()
     {
-        AddNavigationImages(0, "Presets.png", "presentsUNclicked.png");
-        AddNavigationImages(1, "Buttons.png", "buttonsUnClicked.png");
-        AddNavigationImages(2, "keyboard.png", "keyboardUNclicked.png");
-        AddNavigationImages(3, "motion.png", "MotionUNclicked.png");
-        AddNavigationImages(4, "logs.png", "LogsUNclicked.png");
+        AddNavigationImages(0, "Presets.png", "PresetsUnclicked.png");
+        AddNavigationImages(1, "Buttons.png", "ButtonsUnclicked.png");
+        AddNavigationImages(2, "Keyboard.png", "KeyboardUnclicked.png");
+        AddNavigationImages(3, "Motion.png", "MotionUnclicked.png");
+        AddNavigationImages(4, "Logs.png", "LogsUnclicked.png");
     }
 
     private void AddNavigationImages(int index, string activeFile, string inactiveFile)
@@ -1491,26 +1554,20 @@ internal sealed class MainForm : Form
 
     private static Bitmap CreateNavigationImage(Image source)
     {
-        const int width = 392;
-        const int height = 144;
+        const int width = 96;
+        const int height = 96;
         var cropAspect = width / (float)height;
-        var cropWidth = source.Width;
-        var cropHeight = Math.Min(source.Height, (int)(cropWidth / cropAspect));
-        var cropY = Math.Max(0, (source.Height - cropHeight) / 2);
-        var crop = new Rectangle(0, cropY, cropWidth, cropHeight);
+        var cropHeight = source.Height;
+        var cropWidth = Math.Min(source.Width, (int)(cropHeight * cropAspect));
+        var cropX = Math.Max(0, (source.Width - cropWidth) / 2);
+        var crop = new Rectangle(cropX, 0, cropWidth, cropHeight);
 
         var output = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
         using var graphics = Graphics.FromImage(output);
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
         graphics.Clear(Color.Transparent);
-
-        using var clip = GraphicsExtensions.CreateRoundedRectangle(new Rectangle(0, 0, width, height), 12);
-        graphics.SetClip(clip);
         graphics.DrawImage(source, new Rectangle(0, 0, width, height), crop, GraphicsUnit.Pixel);
-
-        using var veil = new SolidBrush(Color.FromArgb(58, 7, 18, 33));
-        graphics.FillRectangle(veil, 0, 0, width, height);
         return output;
     }
 
@@ -1540,6 +1597,7 @@ internal sealed class MainForm : Form
 
         return output;
     }
+
 }
 
 internal static class GraphicsExtensions
