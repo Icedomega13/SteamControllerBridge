@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+
+- Fixed quick-control strip repaint artifacts when the window is stretched wide.
+- Increased sidebar category row height and spacing to prevent artwork clipping.
+
 ## 0.6.4
 
 - Added custom active and inactive sidebar category artwork.

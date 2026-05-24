@@ -9,7 +9,8 @@ internal sealed class MainForm : Form
     private readonly NotifyIcon _trayIcon;
     private readonly Label _statusLabel = new();
     private readonly Label _detailLabel = new();
-    private readonly FlowLayoutPanel _quickOptionsPanel = new();
+    private readonly Panel _quickOptionsPanel = new();
+    private readonly FlowLayoutPanel _quickOptionsContent = new();
     private readonly TextBox _logBox = new();
     private readonly Panel _advancedPanel = new();
     private readonly Label _connectionLabel = new();
@@ -166,7 +167,6 @@ internal sealed class MainForm : Form
         header.Controls.Add(titleStack, 0, 0);
 
         BuildQuickOptions();
-        _quickOptionsPanel.Padding = new Padding(18, 14, 18, 14);
         _quickOptionsPanel.Margin = new Padding(0, 0, 0, 22);
 
         BuildAdvancedPanel();
@@ -212,7 +212,7 @@ internal sealed class MainForm : Form
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             Width = 196,
-            Height = 420,
+            Height = 430,
             Left = 16,
             Top = 168,
             BackColor = Color.Transparent
@@ -280,10 +280,10 @@ internal sealed class MainForm : Form
             Text = text,
             Name = text,
             Width = 196,
-            Height = 58,
+            Height = 72,
             TextAlign = ContentAlignment.MiddleLeft,
             Padding = new Padding(0),
-            Margin = new Padding(0, 0, 0, 8),
+            Margin = new Padding(0, 0, 0, 12),
             FlatStyle = FlatStyle.Flat,
             Font = new Font(Font.FontFamily, 10, FontStyle.Bold),
             BackgroundImageLayout = ImageLayout.Stretch,
@@ -303,10 +303,11 @@ internal sealed class MainForm : Form
 
     private void BuildQuickOptions()
     {
-        _quickOptionsPanel.AutoSize = true;
+        _quickOptionsPanel.Height = 48;
         _quickOptionsPanel.Dock = DockStyle.Top;
         _quickOptionsPanel.Margin = new Padding(0, 12, 0, 0);
-        _quickOptionsPanel.WrapContents = true;
+        _quickOptionsPanel.Padding = new Padding(18, 12, 18, 10);
+        _quickOptionsPanel.Resize += (_, _) => _quickOptionsPanel.Invalidate();
         _quickOptionsPanel.Paint += (_, e) =>
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
@@ -315,6 +316,13 @@ internal sealed class MainForm : Form
             e.Graphics.FillRoundedRectangle(fill, new Rectangle(0, 0, _quickOptionsPanel.Width - 1, _quickOptionsPanel.Height - 1), 10);
             e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, _quickOptionsPanel.Width - 1, _quickOptionsPanel.Height - 1), 10);
         };
+
+        _quickOptionsContent.Dock = DockStyle.Fill;
+        _quickOptionsContent.FlowDirection = FlowDirection.LeftToRight;
+        _quickOptionsContent.WrapContents = false;
+        _quickOptionsContent.AutoScroll = false;
+        _quickOptionsContent.Margin = new Padding(0);
+        _quickOptionsContent.Padding = new Padding(0);
 
         _rumbleCheck.Text = "Enable rumble";
         _rumbleCheck.AutoSize = true;
@@ -341,11 +349,12 @@ internal sealed class MainForm : Form
         _autoDisableForSteamCheck.Margin = new Padding(0, 0, 0, 0);
         _autoDisableForSteamCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
 
-        _quickOptionsPanel.Controls.Add(_rumbleCheck);
-        _quickOptionsPanel.Controls.Add(_gyroMouseCheck);
-        _quickOptionsPanel.Controls.Add(_gyroActivationCombo);
-        _quickOptionsPanel.Controls.Add(_startWithWindowsCheck);
-        _quickOptionsPanel.Controls.Add(_autoDisableForSteamCheck);
+        _quickOptionsContent.Controls.Add(_rumbleCheck);
+        _quickOptionsContent.Controls.Add(_gyroMouseCheck);
+        _quickOptionsContent.Controls.Add(_gyroActivationCombo);
+        _quickOptionsContent.Controls.Add(_startWithWindowsCheck);
+        _quickOptionsContent.Controls.Add(_autoDisableForSteamCheck);
+        _quickOptionsPanel.Controls.Add(_quickOptionsContent);
     }
 
     private void BuildAdvancedPanel()
@@ -976,6 +985,7 @@ internal sealed class MainForm : Form
         _logBox.BackColor = panel;
         _logBox.ForeColor = fore;
         _logBox.BorderStyle = BorderStyle.None;
+        _quickOptionsContent.BackColor = Color.Transparent;
         _quickOptionsPanel.Invalidate();
         HighlightNav(_selectedPageIndex);
     }
@@ -1245,7 +1255,7 @@ internal sealed class MainForm : Form
     private static Bitmap CreateNavigationImage(Image source)
     {
         const int width = 392;
-        const int height = 116;
+        const int height = 144;
         var cropAspect = width / (float)height;
         var cropWidth = source.Width;
         var cropHeight = Math.Min(source.Height, (int)(cropWidth / cropAspect));
