@@ -17,7 +17,7 @@ internal sealed class SteamControllerDevice : IDisposable
     {
         foreach (var strictUsage in new[] { true, false })
         {
-            foreach (var productId in new[] { SteamControllerReports.WiredProductId, SteamControllerReports.PuckProductId })
+            foreach (var productId in SteamControllerReports.SupportedProductIds)
             {
                 var usagePage = strictUsage ? SteamControllerReports.VendorUsagePage : (ushort)0;
                 log?.Invoke($"Scanning Valve HID interfaces. Product=0x{productId:X4}, UsagePage={(usagePage == 0 ? "any" : $"0x{usagePage:X4}")}.");
@@ -34,7 +34,7 @@ internal sealed class SteamControllerDevice : IDisposable
                         continue;
                     }
 
-                    log?.Invoke($"Opened candidate. FeatureReportLength={device.FeatureReportLength}, OutputReportLength={device.OutputReportLength}. Waiting for 0x42 input reports.");
+                    log?.Invoke($"Opened candidate. FeatureReportLength={device.FeatureReportLength}, OutputReportLength={device.OutputReportLength}. Waiting for controller input reports.");
                     var probe = new byte[64];
                     var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
                     while (DateTime.UtcNow < deadline)

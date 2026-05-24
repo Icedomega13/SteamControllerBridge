@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.6.7
+# Steam Controller Bridge v0.7.0
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -6,12 +6,14 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 - Presents the Steam Controller as a virtual Xbox 360 controller for XInput games.
 - Supports wired and Steam Controller Puck HID interfaces.
+- Supports Valve `0x1302`, `0x1303`, and `0x1304` Steam Controller HID product IDs.
 - Handles known state report IDs `0x42` and `0x45`.
 - Disables lizard mode while enabled and restores it on shutdown.
 - Includes full button remapping for standard gamepad buttons and back paddles.
 - Includes keyboard key mapping for controller buttons, triggers, back paddles, and pad clicks.
 - Includes per-button turbo toggles for rapid-fire style presses.
-- Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, and Desktop Mouse.
+- Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, Desktop Mouse, and Old School FPS.
+- Includes saveable profiles with import/export support for sharing layouts.
 - Includes a redesigned tabbed Advanced UI for presets, button remaps, motion, and logs.
 - Includes L4, L5, R4, and R5 as gyro activation options.
 - Includes a mappable gyro aim toggle button for temporarily disabling gyro aim.
@@ -19,13 +21,18 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes a universal turbo speed slider and trigger turbo toggles.
 - Includes optional trackpad-as-mouse mode.
 - Includes simple gyro mode with mouse or virtual right-stick output.
+- Includes left-stick WASD and right-stick mouse modes for keyboard-and-mouse-only PC games.
 - Includes optional rumble passthrough and a rumble toggle.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes diagnostic logging.
 
-## Changes in 0.6.7
+## Changes in 0.7.0
 
-- Replaced inactive sidebar category artwork with matched inverted versions for cleaner active/inactive transitions.
+- Added saveable preset profiles with load, import, export, and delete controls.
+- Added an Old School FPS preset for games without controller support.
+- Added left-stick WASD output, right-stick mouse aiming, mouse speed, and vertical invert controls.
+- Suppressed virtual stick output when stick-to-keyboard or stick-to-mouse modes are enabled.
+- Added Valve `0x1303` HID support for controllers that expose the Bluetooth-style product ID.
 
 ## Requirements
 
@@ -52,5 +59,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.6.7.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.6.7.zip`
+- `SteamControllerBridgeSetup-0.7.0.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.7.0.zip`

@@ -33,6 +33,13 @@ internal sealed class MainForm : Form
     private readonly Dictionary<ControllerInput, TextBox> _keyboardKeyBoxes = new();
     private readonly ComboBox _presetCombo = new();
     private readonly Button _applyPresetButton = new();
+    private readonly ComboBox _profileCombo = new();
+    private readonly TextBox _profileNameBox = new();
+    private readonly Button _loadProfileButton = new();
+    private readonly Button _saveProfileButton = new();
+    private readonly Button _importProfileButton = new();
+    private readonly Button _exportProfileButton = new();
+    private readonly Button _deleteProfileButton = new();
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly ComboBox _gyroActivationCombo = new();
     private readonly ComboBox _gyroToggleCombo = new();
@@ -46,6 +53,11 @@ internal sealed class MainForm : Form
     private readonly CheckBox _rightTriggerTurboCheck = new();
     private readonly CheckBox _trackpadMouseCheck = new();
     private readonly CheckBox _trackpadClickCheck = new();
+    private readonly CheckBox _leftStickWasdCheck = new();
+    private readonly CheckBox _rightStickMouseCheck = new();
+    private readonly CheckBox _invertRightStickYCheck = new();
+    private readonly TrackBar _rightStickMouseSensitivitySlider = new();
+    private readonly Label _rightStickMouseSensitivityValue = new();
     private readonly CheckBox _gyroMouseCheck = new();
     private readonly CheckBox _rumbleCheck = new();
     private readonly CheckBox _startWithWindowsCheck = new();
@@ -361,6 +373,7 @@ internal sealed class MainForm : Form
 
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
         ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
+        ConfigureCombo(_profileCombo, Array.Empty<string>());
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
         ConfigureCombo(_gyroToggleCombo, Enum.GetValues<GyroToggleButton>());
 
@@ -412,7 +425,10 @@ internal sealed class MainForm : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        for (var row = 0; row < 5; row++)
+        {
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        }
 
         AddOptionRow(layout, 0, "Preset", _presetCombo);
         _applyPresetButton.Text = "Apply";
@@ -420,6 +436,49 @@ internal sealed class MainForm : Form
         _applyPresetButton.Dock = DockStyle.Fill;
         _applyPresetButton.Click += (_, _) => ApplySelectedPreset();
         layout.Controls.Add(_applyPresetButton, 2, 0);
+
+        var profileHeader = new Label
+        {
+            Text = "Profiles",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Font = new Font(Font, FontStyle.Bold),
+            Margin = new Padding(0, 18, 8, 4)
+        };
+        layout.Controls.Add(profileHeader, 0, 1);
+
+        AddOptionRow(layout, 2, "Profile", _profileCombo);
+        ConfigureSmallButton(_loadProfileButton, "Load");
+        _loadProfileButton.Click += (_, _) => LoadSelectedProfile();
+        layout.Controls.Add(_loadProfileButton, 2, 2);
+
+        _profileNameBox.Dock = DockStyle.Fill;
+        _profileNameBox.Margin = new Padding(0, 7, 8, 0);
+        var saveLabel = new Label
+        {
+            Text = "Save as",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 9, 8, 0)
+        };
+        layout.Controls.Add(saveLabel, 0, 3);
+        layout.Controls.Add(_profileNameBox, 1, 3);
+        ConfigureSmallButton(_saveProfileButton, "Save");
+        _saveProfileButton.Click += (_, _) => SaveProfile();
+        layout.Controls.Add(_saveProfileButton, 2, 3);
+
+        var profileActions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 8, 0, 0) };
+        ConfigureSmallButton(_importProfileButton, "Import");
+        ConfigureSmallButton(_exportProfileButton, "Export");
+        ConfigureSmallButton(_deleteProfileButton, "Delete");
+        _importProfileButton.Click += (_, _) => ImportProfile();
+        _exportProfileButton.Click += (_, _) => ExportSelectedProfile();
+        _deleteProfileButton.Click += (_, _) => DeleteSelectedProfile();
+        profileActions.Controls.Add(_importProfileButton);
+        profileActions.Controls.Add(_exportProfileButton);
+        profileActions.Controls.Add(_deleteProfileButton);
+        layout.Controls.Add(profileActions, 1, 4);
+        layout.SetColumnSpan(profileActions, 2);
         tab.Controls.Add(layout);
         return tab;
     }
@@ -506,7 +565,7 @@ internal sealed class MainForm : Form
         var layout = CreateFormLayout(2);
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var row = 0; row < 8; row++)
+        for (var row = 0; row < 12; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -518,6 +577,10 @@ internal sealed class MainForm : Form
         AddOptionRow(layout, 4, "Mouse pad", _trackpadSourceCombo);
         AddCheckRow(layout, 5, _trackpadMouseCheck, "Use trackpad as mouse");
         AddCheckRow(layout, 6, _trackpadClickCheck, "Trackpad click is left click");
+        AddCheckRow(layout, 7, _leftStickWasdCheck, "Left stick sends WASD");
+        AddCheckRow(layout, 8, _rightStickMouseCheck, "Right stick controls mouse");
+        AddRightStickSensitivityRow(layout, 9);
+        AddCheckRow(layout, 10, _invertRightStickYCheck, "Invert right-stick vertical mouse");
         tab.Controls.Add(layout);
         return tab;
     }
@@ -559,6 +622,15 @@ internal sealed class MainForm : Form
         {
             combo.Items.Add(value!);
         }
+    }
+
+    private static void ConfigureSmallButton(Button button, string text)
+    {
+        button.Text = text;
+        button.Height = 32;
+        button.AutoSize = false;
+        button.Width = 88;
+        button.Margin = new Padding(0, 6, 8, 0);
     }
 
     private void AddOptionRow(TableLayoutPanel layout, int row, string label, ComboBox combo)
@@ -820,6 +892,41 @@ internal sealed class MainForm : Form
         layout.Controls.Add(panel, 1, row);
     }
 
+    private void AddRightStickSensitivityRow(TableLayoutPanel layout, int row)
+    {
+        var label = new Label
+        {
+            Text = "Right stick mouse speed",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 9, 8, 0)
+        };
+
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 46));
+
+        _rightStickMouseSensitivitySlider.Minimum = 1;
+        _rightStickMouseSensitivitySlider.Maximum = 80;
+        _rightStickMouseSensitivitySlider.TickFrequency = 10;
+        _rightStickMouseSensitivitySlider.SmallChange = 1;
+        _rightStickMouseSensitivitySlider.LargeChange = 5;
+        _rightStickMouseSensitivitySlider.Dock = DockStyle.Fill;
+        _rightStickMouseSensitivitySlider.ValueChanged += (_, _) =>
+        {
+            _rightStickMouseSensitivityValue.Text = _rightStickMouseSensitivitySlider.Value.ToString();
+            SaveOptionsFromUi();
+        };
+
+        _rightStickMouseSensitivityValue.AutoSize = true;
+        _rightStickMouseSensitivityValue.Anchor = AnchorStyles.Left;
+
+        panel.Controls.Add(_rightStickMouseSensitivitySlider, 0, 0);
+        panel.Controls.Add(_rightStickMouseSensitivityValue, 1, 0);
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+    }
+
     private void AddNumericRow(TableLayoutPanel layout, int row, string labelText, NumericUpDown input, int minimum, int maximum)
     {
         var label = new Label
@@ -880,6 +987,11 @@ internal sealed class MainForm : Form
         _gyroStickSensitivitySlider.Value = _bridge.Options.GyroStickSensitivity;
         _gyroStickSensitivityValue.Text = _bridge.Options.GyroStickSensitivity.ToString();
         _gyroStickDeadZoneInput.Value = _bridge.Options.GyroStickDeadZone;
+        _leftStickWasdCheck.Checked = _bridge.Options.LeftStickWasdEnabled;
+        _rightStickMouseCheck.Checked = _bridge.Options.RightStickMouseEnabled;
+        _invertRightStickYCheck.Checked = _bridge.Options.InvertRightStickY;
+        _rightStickMouseSensitivitySlider.Value = _bridge.Options.RightStickMouseSensitivity;
+        _rightStickMouseSensitivityValue.Text = _bridge.Options.RightStickMouseSensitivity.ToString();
         _turboSpeedSlider.Value = _bridge.Options.TurboIntervalMs;
         _turboSpeedValue.Text = $"{_bridge.Options.TurboIntervalMs} ms";
         _leftTriggerTurboCheck.Checked = _bridge.Options.LeftTriggerTurbo;
@@ -892,6 +1004,7 @@ internal sealed class MainForm : Form
         _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
+        RefreshProfiles();
         _updatingOptions = false;
         SyncTrayOptions();
     }
@@ -915,6 +1028,10 @@ internal sealed class MainForm : Form
         _bridge.Options.GyroToggleButton = (GyroToggleButton)(_gyroToggleCombo.SelectedItem ?? _bridge.Options.GyroToggleButton);
         _bridge.Options.GyroStickSensitivity = _gyroStickSensitivitySlider.Value;
         _bridge.Options.GyroStickDeadZone = (int)_gyroStickDeadZoneInput.Value;
+        _bridge.Options.LeftStickWasdEnabled = _leftStickWasdCheck.Checked;
+        _bridge.Options.RightStickMouseEnabled = _rightStickMouseCheck.Checked;
+        _bridge.Options.InvertRightStickY = _invertRightStickYCheck.Checked;
+        _bridge.Options.RightStickMouseSensitivity = _rightStickMouseSensitivitySlider.Value;
         _bridge.Options.TurboIntervalMs = _turboSpeedSlider.Value;
         _bridge.Options.LeftTriggerTurbo = _leftTriggerTurboCheck.Checked;
         _bridge.Options.RightTriggerTurbo = _rightTriggerTurboCheck.Checked;
@@ -937,6 +1054,125 @@ internal sealed class MainForm : Form
         LoadOptionsIntoUi();
         _presetCombo.SelectedItem = preset;
         AppendLog($"{DateTime.Now:HH:mm:ss}  Applied preset: {preset}");
+    }
+
+    private void RefreshProfiles(string? selectedProfile = null)
+    {
+        var current = selectedProfile ?? _profileCombo.SelectedItem as string;
+        _profileCombo.Items.Clear();
+        foreach (var profile in BridgeProfileStore.ListProfiles())
+        {
+            _profileCombo.Items.Add(profile);
+        }
+
+        if (current is not null && _profileCombo.Items.Contains(current))
+        {
+            _profileCombo.SelectedItem = current;
+        }
+        else if (_profileCombo.Items.Count > 0)
+        {
+            _profileCombo.SelectedIndex = 0;
+        }
+
+        var hasSelection = _profileCombo.SelectedItem is not null;
+        _loadProfileButton.Enabled = hasSelection;
+        _exportProfileButton.Enabled = hasSelection;
+        _deleteProfileButton.Enabled = hasSelection;
+    }
+
+    private void SaveProfile()
+    {
+        var name = BridgeProfileStore.SanitizeProfileName(_profileNameBox.Text);
+        if (string.IsNullOrWhiteSpace(_profileNameBox.Text))
+        {
+            MessageBox.Show(this, "Enter a profile name first.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        SaveOptionsFromUi();
+        BridgeProfileStore.Save(name, _bridge.Options);
+        RefreshProfiles(name);
+        _profileNameBox.Text = name;
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Saved profile: {name}");
+    }
+
+    private void LoadSelectedProfile()
+    {
+        if (_profileCombo.SelectedItem is not string name)
+        {
+            return;
+        }
+
+        _bridge.LoadOptions(BridgeProfileStore.Load(name));
+        LoadOptionsIntoUi();
+        RefreshProfiles(name);
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Loaded profile: {name}");
+    }
+
+    private void ImportProfile()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Filter = "Steam Controller Bridge profile (*.scbprofile)|*.scbprofile|JSON files (*.json)|*.json|All files (*.*)|*.*",
+            Title = "Import profile"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            var name = BridgeProfileStore.Import(dialog.FileName);
+            RefreshProfiles(name);
+            AppendLog($"{DateTime.Now:HH:mm:ss}  Imported profile: {name}");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"Could not import profile:\n{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ExportSelectedProfile()
+    {
+        if (_profileCombo.SelectedItem is not string name)
+        {
+            return;
+        }
+
+        using var dialog = new SaveFileDialog
+        {
+            Filter = "Steam Controller Bridge profile (*.scbprofile)|*.scbprofile",
+            FileName = $"{name}.scbprofile",
+            Title = "Export profile"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        BridgeProfileStore.Export(name, dialog.FileName);
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Exported profile: {name}");
+    }
+
+    private void DeleteSelectedProfile()
+    {
+        if (_profileCombo.SelectedItem is not string name)
+        {
+            return;
+        }
+
+        var confirm = MessageBox.Show(this, $"Delete profile '{name}'?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes)
+        {
+            return;
+        }
+
+        BridgeProfileStore.Delete(name);
+        RefreshProfiles();
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Deleted profile: {name}");
     }
 
     private void SyncTrayOptions()

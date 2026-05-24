@@ -12,6 +12,7 @@ internal sealed class BridgeService : IDisposable
     private readonly MouseEmulator _mouse = new();
     private readonly GyroMouseEmulator _gyroMouse = new();
     private readonly KeyboardEmulator _keyboard = new();
+    private readonly FpsInputEmulator _fpsInput = new();
     private readonly object _rumbleGate = new();
     private byte _rumbleSmall;
     private byte _rumbleLarge;
@@ -28,11 +29,12 @@ internal sealed class BridgeService : IDisposable
     public event EventHandler<string>? LogWritten;
 
     public BridgeStatus Status { get; private set; } = BridgeStatus.Idle("Off");
-    public BridgeOptions Options { get; } = BridgeOptionsStore.Load();
+    public BridgeOptions Options { get; private set; } = BridgeOptionsStore.Load();
 
     public BridgeService()
     {
         _keyboard.LogWritten += (_, message) => Log(message);
+        _fpsInput.LogWritten += (_, message) => Log(message);
     }
 
     public void SaveOptions()
@@ -43,6 +45,13 @@ internal sealed class BridgeService : IDisposable
         {
             StopRumble();
         }
+    }
+
+    public void LoadOptions(BridgeOptions options)
+    {
+        options.Normalize();
+        Options = options;
+        SaveOptions();
     }
 
     public void TickLifecycle()
@@ -187,6 +196,7 @@ internal sealed class BridgeService : IDisposable
         _mouse.Reset();
         _gyroMouse.Reset();
         _keyboard.Reset();
+        _fpsInput.Reset();
         _controller?.SendRumble(0, 0);
         _virtualController?.Dispose();
         _virtualController = null;
@@ -215,6 +225,7 @@ internal sealed class BridgeService : IDisposable
                 UpdateGyroToggle(input);
                 _virtualController?.Update(input, Options, _gyroAllowed);
                 _keyboard.Update(input, Options);
+                _fpsInput.Update(input, Options);
                 _mouse.Update(input, Options);
                 if (Options.GyroOutputMode == GyroOutputMode.Mouse)
                 {
@@ -299,6 +310,7 @@ internal sealed class BridgeService : IDisposable
                 _mouse.Reset();
                 _gyroMouse.Reset();
                 _keyboard.Reset();
+                _fpsInput.Reset();
                 _virtualController?.Dispose();
                 _virtualController = null;
                 CleanupController(restoreLizard: false);
@@ -429,5 +441,6 @@ internal sealed class BridgeService : IDisposable
     {
         Stop();
         _keyboard.Reset();
+        _fpsInput.Reset();
     }
 }

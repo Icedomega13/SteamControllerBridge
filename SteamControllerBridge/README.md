@@ -1,75 +1,112 @@
 # Steam Controller Bridge
 
-A tiny Windows tray app that makes the 2026 Steam Controller appear as a virtual Xbox 360 controller.
+Steam Controller Bridge is a tiny Windows tray app that makes the 2026 Steam Controller appear as a virtual Xbox 360 controller.
 
-The intended experience is deliberately simple:
+The goal is intentionally simple: connect the controller, turn the bridge on, and launch a game. No Steam shortcut setup, no giant dashboard.
 
-1. Connect the Steam Controller.
-2. Open Steam Controller Bridge.
-3. Turn it on.
-4. Launch a Game Pass, Epic, emulator, or other XInput game.
+![Steam Controller Bridge main window](docs/images/main-window.jpg)
 
-![Steam Controller Bridge main window](../docs/images/main-window.jpg)
+## Current Status
+
+This is an early public test build. It works by reading the Steam Controller's raw HID reports and forwarding gamepad input to a virtual Xbox 360 controller through ViGEmBus.
+
+The app is useful today, but it is still community test software. Expect some rough edges around rumble tuning, Steam handoff, and firmware differences.
 
 ## Install
 
-1. Download the latest release.
-2. Install ViGEmBus if it is not already installed.
-3. Run the installer or extract the portable ZIP.
+1. Download the latest release from the GitHub Releases page.
+2. Install ViGEmBus if you do not already have it.
+3. Run `SteamControllerBridgeSetup-0.7.0.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
-6. Click the controller icon in the upper-left corner.
+6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
 
-The installer does not install ViGEmBus automatically. If ViGEmBus is missing, the app reports that in the main window.
+The installer does not install ViGEmBus automatically. If ViGEmBus is missing, the app will show a clear status message when you turn the bridge on.
 
-## Current MVP
+## First Run
 
-- Finds the wired controller or Steam Controller Puck HID interface.
-- Disables lizard mode while enabled.
-- Creates one virtual Xbox 360 controller through ViGEmBus.
-- Translates and remaps standard gamepad inputs into XInput:
-  - ABXY
-  - D-pad
-  - bumpers
-  - back paddles
-  - triggers
-  - sticks
-  - stick clicks
-  - View/Menu
-  - Steam button as Guide
-- Passes Xbox rumble through to Steam Controller haptics on a best-effort basis.
-- Provides optional trackpad mouse mode.
-- Saves options for full button remapping, keyboard mapping, turbo toggles, startup, Steam handoff, trackpad mouse, and gyro behavior.
-- Includes one-click remap presets and gyro output to mouse or virtual right stick.
-- Can back off when Steam starts and reconnect when Steam closes.
-- Includes deep HID diagnostics for support reports.
-- Restores lizard mode when turned off or when the app exits normally.
-- Uses sidebar navigation for presets, button mapping, keyboard mapping, motion, and logs.
+- Keep Steam closed while testing the bridge.
+- Use the controller icon in the upper-left corner to turn the bridge on or off.
+- Use the sidebar pages when you want presets, saveable profiles, button remaps, keyboard mappings, turbo, trackpad mouse, gyro, logs, startup, or Steam handoff settings.
+- For Nintendo-style layouts, set physical `A` to output `B` and physical `B` to output `A`.
+- If a game sees double input, close Steam and any other controller remapping tools.
+
+## Features
+
+- One-switch tray app
+- Direct HID input from the 2026 Steam Controller / Steam Controller Puck, including Valve `0x1302`, `0x1303`, and `0x1304` HID product IDs
+- Virtual Xbox 360 output for XInput games
+- Best-effort Xbox rumble passthrough to Steam Controller haptics
+- Rumble enable/disable toggle
+- Full button remapping, including ABXY, bumpers, D-pad, stick clicks, View/Menu, Steam/Guide, and L4/L5/R4/R5
+- Per-button turbo toggles
+- One-click remap presets, including Nintendo swap, FPS gyro options, and Old School FPS
+- Saveable profiles with import/export support for sharing layouts
+- Optional trackpad-as-mouse mode
+- Optional gyro output to mouse or the virtual right stick
+- Optional left-stick WASD and right-stick mouse mode for older keyboard-and-mouse-only games
+- Right-stick mouse speed and vertical invert controls
+- Keyboard key mapping for controller buttons, triggers, pad clicks, and back paddles
+- Universal turbo speed control and trigger turbo toggles
+- Start with Windows toggle
+- Automatic Steam handoff and reconnect attempts
+- Deep HID diagnostics for troubleshooting controller detection
+- Lizard mode disable while enabled
+- Lizard mode restore on normal shutdown
+- Custom app/tray icon
+- Small diagnostic probe project for controller/interface debugging
 
 ## Requirements
 
-- Windows 10 or newer.
-- .NET 9 desktop runtime if running the framework-dependent build.
-- ViGEmBus installed.
+- Windows 10 or newer
+- No separate .NET install is required when using the self-contained release build
+- ViGEmBus installed
+- 2026 Steam Controller, wired or through the Steam Controller Puck
 
-ViGEmBus is retired, so it is treated as an MVP backend rather than the ideal long-term foundation. The bridge code keeps virtual-controller output isolated so another backend can replace it later.
+Steam should be closed for this MVP. Steam can claim the controller and interfere with direct HID access.
+
+ViGEmBus is retired/end-of-life, so it is treated as a practical MVP backend rather than the ideal long-term foundation.
 
 ## Build
 
 ```powershell
-dotnet build
+dotnet build .\SteamControllerBridge.sln -c Release
 ```
 
-## Run
+## Run From Source
 
 ```powershell
-dotnet run
+dotnet run --project .\SteamControllerBridge\SteamControllerBridge.csproj
 ```
 
-## Notes
+## Publish
 
-Steam should be closed for this MVP. Steam can claim the controller, which prevents direct raw HID access.
+```powershell
+dotnet publish .\SteamControllerBridge\SteamControllerBridge.csproj -c Release -r win-x64 --self-contained true -o .\dist\SteamControllerBridge-win-x64-self-contained
+```
 
-Trackpad-as-stick, HidHide duplicate suppression, native motion output, and a better virtual-device backend are intentionally left out for now so the core bridge stays reliable.
+Zip the contents of `dist\SteamControllerBridge-win-x64-self-contained` for a GitHub Release, or build the Inno Setup installer from `installer\SteamControllerBridge.iss`.
 
-Steam Controller haptics are implemented from public output-report behavior and may need tuning on real hardware.
+## Diagnostic Probe
+
+The probe lists Valve HID interfaces and reports whether they emit controller reports:
+
+```powershell
+dotnet run --project .\SteamControllerBridge.Probe\SteamControllerBridge.Probe.csproj
+```
+
+This is useful when Windows sees the controller but the bridge cannot find the live input interface.
+
+## Limitations
+
+- No native Switch/DSU motion output yet
+- No trackpad-as-stick mapping yet
+- No HidHide integration yet
+- Virtual output currently depends on ViGEmBus
+- Steam Controller haptics are implemented as best-effort rumble and may need tuning on real hardware
+- Advanced remapping is global, not per-game
+- Gyro currently maps to mouse or virtual right-stick movement, not emulator-native motion
+
+## Credits
+
+This project is informed by public community work around Steam Controller HID reports and virtual gamepad output. It does not include code from SISR or SteamlessController.

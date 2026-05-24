@@ -59,7 +59,7 @@ internal static class SystemDiagnostics
 
             if (interfaces.Count == 0)
             {
-                return "No Valve HID interfaces found. Expected VID_28DE with PID_1302 or PID_1304.";
+                return "No Valve HID interfaces found. Expected VID_28DE with PID_1302, PID_1303, or PID_1304.";
             }
 
             return string.Join(Environment.NewLine, interfaces.Select(FormatHidInterface));
@@ -73,8 +73,7 @@ internal static class SystemDiagnostics
     private static string FormatHidInterface(HidInterfaceInfo device)
     {
         var supported = device.VendorId == SteamControllerReports.ValveVendorId &&
-                        (device.ProductId == SteamControllerReports.WiredProductId ||
-                         device.ProductId == SteamControllerReports.PuckProductId);
+                        SteamControllerReports.SupportedProductIds.Contains(device.ProductId);
         var metadata = device.CanOpenMetadata ? "metadata=yes" : $"metadata=no ({device.OpenError ?? "unknown error"})";
 
         return string.Join(Environment.NewLine, new[]

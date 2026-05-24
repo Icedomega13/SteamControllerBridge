@@ -4,8 +4,15 @@ internal static class SteamControllerReports
 {
     public const ushort ValveVendorId = 0x28DE;
     public const ushort WiredProductId = 0x1302;
+    public const ushort BluetoothProductId = 0x1303;
     public const ushort PuckProductId = 0x1304;
     public const ushort VendorUsagePage = 0xFF00;
+    public static readonly ushort[] SupportedProductIds =
+    [
+        WiredProductId,
+        BluetoothProductId,
+        PuckProductId
+    ];
 
     public const byte StateReportId = 0x42;
     public const byte StateBleReportId = 0x45;

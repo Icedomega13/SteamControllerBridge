@@ -2,7 +2,7 @@
 
 Steam Controller Bridge is a tiny Windows tray app that makes the 2026 Steam Controller appear as a virtual Xbox 360 controller.
 
-The goal is intentionally simple: connect the controller, turn the bridge on, and launch an XInput game. No Steam shortcut setup, no profile editor, no giant dashboard.
+The goal is intentionally simple: connect the controller, turn the bridge on, and launch a game. No Steam shortcut setup, no giant dashboard.
 
 ![Steam Controller Bridge main window](docs/images/main-window.jpg)
 
@@ -16,7 +16,7 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.6.7.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.7.0.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
 6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
@@ -27,22 +27,25 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
 
 - Keep Steam closed while testing the bridge.
 - Use the controller icon in the upper-left corner to turn the bridge on or off.
-- Use the sidebar pages when you want presets, button remaps, keyboard mappings, turbo, trackpad mouse, gyro, logs, startup, or Steam handoff settings.
+- Use the sidebar pages when you want presets, saveable profiles, button remaps, keyboard mappings, turbo, trackpad mouse, gyro, logs, startup, or Steam handoff settings.
 - For Nintendo-style layouts, set physical `A` to output `B` and physical `B` to output `A`.
 - If a game sees double input, close Steam and any other controller remapping tools.
 
 ## Features
 
 - One-switch tray app
-- Direct HID input from the 2026 Steam Controller / Steam Controller Puck
+- Direct HID input from the 2026 Steam Controller / Steam Controller Puck, including Valve `0x1302`, `0x1303`, and `0x1304` HID product IDs
 - Virtual Xbox 360 output for XInput games
 - Best-effort Xbox rumble passthrough to Steam Controller haptics
 - Rumble enable/disable toggle
 - Full button remapping, including ABXY, bumpers, D-pad, stick clicks, View/Menu, Steam/Guide, and L4/L5/R4/R5
 - Per-button turbo toggles
-- One-click remap presets, including Nintendo swap and FPS gyro options
+- One-click remap presets, including Nintendo swap, FPS gyro options, and Old School FPS
+- Saveable profiles with import/export support for sharing layouts
 - Optional trackpad-as-mouse mode
 - Optional gyro output to mouse or the virtual right stick
+- Optional left-stick WASD and right-stick mouse mode for older keyboard-and-mouse-only games
+- Right-stick mouse speed and vertical invert controls
 - Keyboard key mapping for controller buttons, triggers, pad clicks, and back paddles
 - Universal turbo speed control and trigger turbo toggles
 - Start with Windows toggle

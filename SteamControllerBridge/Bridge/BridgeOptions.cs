@@ -34,6 +34,10 @@ internal sealed class BridgeOptions
     public GyroOutputMode GyroOutputMode { get; set; } = GyroOutputMode.Mouse;
     public int GyroStickSensitivity { get; set; } = 26;
     public int GyroStickDeadZone { get; set; } = 45;
+    public bool LeftStickWasdEnabled { get; set; }
+    public bool RightStickMouseEnabled { get; set; }
+    public bool InvertRightStickY { get; set; }
+    public int RightStickMouseSensitivity { get; set; } = 18;
     public int TurboIntervalMs { get; set; } = 80;
     public bool LeftTriggerTurbo { get; set; }
     public bool RightTriggerTurbo { get; set; }
@@ -67,6 +71,7 @@ internal sealed class BridgeOptions
         KeyboardKeys ??= new Dictionary<string, int>();
         GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
         GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
+        RightStickMouseSensitivity = Math.Clamp(RightStickMouseSensitivity, 1, 80);
         TurboIntervalMs = Math.Clamp(TurboIntervalMs, 25, 500);
     }
 
@@ -148,6 +153,9 @@ internal sealed class BridgeOptions
         GyroOutputMode = GyroOutputMode.Mouse;
         GyroMouseActivation = GyroMouseActivation.LeftTrigger;
         GyroToggleButton = GyroToggleButton.Disabled;
+        LeftStickWasdEnabled = false;
+        RightStickMouseEnabled = false;
+        InvertRightStickY = false;
 
         switch (preset)
         {
@@ -173,6 +181,12 @@ internal sealed class BridgeOptions
                 GyroMouseEnabled = true;
                 GyroOutputMode = GyroOutputMode.Mouse;
                 GyroMouseActivation = GyroMouseActivation.RightPadTouch;
+                break;
+            case RemapPreset.OldSchoolFps:
+                LeftStickWasdEnabled = true;
+                RightStickMouseEnabled = true;
+                TrackpadMouseEnabled = false;
+                GyroMouseEnabled = false;
                 break;
         }
     }
@@ -300,7 +314,8 @@ internal enum RemapPreset
     NintendoSwap,
     FpsGyroMouse,
     FpsGyroStick,
-    DesktopMouse
+    DesktopMouse,
+    OldSchoolFps
 }
 
 internal enum PaddleMapping

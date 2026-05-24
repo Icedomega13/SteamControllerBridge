@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Added saveable preset profiles with load, import, export, and delete controls.
+- Added an Old School FPS preset for keyboard-and-mouse-only games.
+- Added left-stick WASD output and right-stick mouse aiming.
+- Added right-stick mouse speed and vertical invert controls.
+- Suppressed virtual stick output when stick-to-keyboard or stick-to-mouse modes are enabled.
+- Added Valve `0x1303` HID support for controllers that expose the Bluetooth-style product ID.
+
 ## 0.6.7
 
 - Replaced inactive sidebar category artwork with matched inverted versions.

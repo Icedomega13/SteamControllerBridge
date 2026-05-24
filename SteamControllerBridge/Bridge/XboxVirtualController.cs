@@ -35,10 +35,16 @@ internal sealed class XboxVirtualController : IDisposable
         _controller.SetButtonsFull(buttons);
         _controller.SetSliderValue(Xbox360Slider.LeftTrigger, BuildTriggerValue(input.LeftTrigger, ControllerInput.LeftTrigger, options.LeftTriggerTurbo, options));
         _controller.SetSliderValue(Xbox360Slider.RightTrigger, BuildTriggerValue(input.RightTrigger, ControllerInput.RightTrigger, options.RightTriggerTurbo, options));
-        _controller.SetAxisValue(Xbox360Axis.LeftThumbX, ReadInt16(input.Report, 10));
-        _controller.SetAxisValue(Xbox360Axis.LeftThumbY, ReadInt16(input.Report, 12));
+        _controller.SetAxisValue(Xbox360Axis.LeftThumbX, options.LeftStickWasdEnabled ? (short)0 : ReadInt16(input.Report, 10));
+        _controller.SetAxisValue(Xbox360Axis.LeftThumbY, options.LeftStickWasdEnabled ? (short)0 : ReadInt16(input.Report, 12));
         var rightX = ReadInt16(input.Report, 14);
         var rightY = ReadInt16(input.Report, 16);
+        if (options.RightStickMouseEnabled)
+        {
+            rightX = 0;
+            rightY = 0;
+        }
+
         ApplyGyroRightStick(input, options, gyroAllowed, ref rightX, ref rightY);
         _controller.SetAxisValue(Xbox360Axis.RightThumbX, rightX);
         _controller.SetAxisValue(Xbox360Axis.RightThumbY, rightY);
