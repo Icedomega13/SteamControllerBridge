@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.6
+
+- Unified the left sidebar background to the darker app color.
+- Reduced contrast around the controller, navigation, and connection status areas.
+
 ## 0.6.5
 
 - Fixed quick-control strip repaint artifacts when the window is stretched wide.

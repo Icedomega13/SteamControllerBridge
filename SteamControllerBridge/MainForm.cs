@@ -13,6 +13,10 @@ internal sealed class MainForm : Form
     private readonly FlowLayoutPanel _quickOptionsContent = new();
     private readonly TextBox _logBox = new();
     private readonly Panel _advancedPanel = new();
+    private readonly Panel _sidebarPanel = new();
+    private readonly Panel _controllerPowerPanel = new();
+    private readonly FlowLayoutPanel _sidebarNavPanel = new();
+    private readonly Panel _sidebarStatusCard = new();
     private readonly Label _connectionLabel = new();
     private readonly Label _sidebarStatusLabel = new();
     private readonly Panel _statusDot = new();
@@ -183,19 +187,16 @@ internal sealed class MainForm : Form
 
     private Panel BuildSidebar()
     {
-        var sidebar = new Panel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(18, 24, 16, 24)
-        };
+        _sidebarPanel.Dock = DockStyle.Fill;
+        _sidebarPanel.Padding = new Padding(18, 24, 16, 24);
+        _sidebarPanel.BackColor = Color.FromArgb(7, 18, 33);
 
-        var iconPanel = new Panel
-        {
-            Width = 120,
-            Height = 120,
-            Left = 37,
-            Top = 18
-        };
+        _controllerPowerPanel.Width = 120;
+        _controllerPowerPanel.Height = 120;
+        _controllerPowerPanel.Left = 37;
+        _controllerPowerPanel.Top = 18;
+        _controllerPowerPanel.BackColor = Color.FromArgb(7, 18, 33);
+
         _controllerPowerImage.Dock = DockStyle.Fill;
         _controllerPowerImage.Margin = new Padding(0);
         _controllerPowerImage.Padding = new Padding(4);
@@ -204,44 +205,39 @@ internal sealed class MainForm : Form
         _controllerPowerImage.Cursor = Cursors.Hand;
         _controllerPowerImage.Click += (_, _) => ToggleBridgeFromIcon();
         _toolTip.SetToolTip(_controllerPowerImage, "Click to connect or disconnect");
-        iconPanel.Controls.Add(_controllerPowerImage);
-        sidebar.Controls.Add(iconPanel);
+        _controllerPowerPanel.Controls.Add(_controllerPowerImage);
+        _sidebarPanel.Controls.Add(_controllerPowerPanel);
 
-        var nav = new FlowLayoutPanel
-        {
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Width = 196,
-            Height = 430,
-            Left = 16,
-            Top = 168,
-            BackColor = Color.Transparent
-        };
+        _sidebarNavPanel.FlowDirection = FlowDirection.TopDown;
+        _sidebarNavPanel.WrapContents = false;
+        _sidebarNavPanel.Width = 196;
+        _sidebarNavPanel.Height = 430;
+        _sidebarNavPanel.Left = 16;
+        _sidebarNavPanel.Top = 168;
+        _sidebarNavPanel.BackColor = Color.FromArgb(7, 18, 33);
 
-        AddNavButton(nav, "Presets", 0);
-        AddNavButton(nav, "Buttons", 1);
-        AddNavButton(nav, "Keyboard", 2);
-        AddNavButton(nav, "Motion", 3);
-        AddNavButton(nav, "Logs", 4);
-        sidebar.Controls.Add(nav);
+        AddNavButton(_sidebarNavPanel, "Presets", 0);
+        AddNavButton(_sidebarNavPanel, "Buttons", 1);
+        AddNavButton(_sidebarNavPanel, "Keyboard", 2);
+        AddNavButton(_sidebarNavPanel, "Motion", 3);
+        AddNavButton(_sidebarNavPanel, "Logs", 4);
+        _sidebarPanel.Controls.Add(_sidebarNavPanel);
 
-        var statusCard = new Panel
-        {
-            Anchor = AnchorStyles.Left | AnchorStyles.Bottom,
-            Width = 196,
-            Height = 92,
-            Left = 16,
-            Top = 560
-        };
-        statusCard.Paint += (_, e) =>
+        _sidebarStatusCard.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+        _sidebarStatusCard.Width = 196;
+        _sidebarStatusCard.Height = 92;
+        _sidebarStatusCard.Left = 16;
+        _sidebarStatusCard.Top = 560;
+        _sidebarStatusCard.BackColor = Color.FromArgb(7, 18, 33);
+        _sidebarStatusCard.Paint += (_, e) =>
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using var fill = new SolidBrush(Color.FromArgb(23, 35, 53));
-            using var pen = new Pen(Color.FromArgb(45, 68, 96));
-            e.Graphics.FillRoundedRectangle(fill, new Rectangle(0, 0, statusCard.Width - 1, statusCard.Height - 1), 8);
-            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, statusCard.Width - 1, statusCard.Height - 1), 8);
+            using var fill = new SolidBrush(Color.FromArgb(7, 18, 33));
+            using var pen = new Pen(Color.FromArgb(33, 55, 82));
+            e.Graphics.FillRoundedRectangle(fill, new Rectangle(0, 0, _sidebarStatusCard.Width - 1, _sidebarStatusCard.Height - 1), 8);
+            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, _sidebarStatusCard.Width - 1, _sidebarStatusCard.Height - 1), 8);
         };
-        sidebar.Resize += (_, _) => statusCard.Top = sidebar.ClientSize.Height - 116;
+        _sidebarPanel.Resize += (_, _) => _sidebarStatusCard.Top = _sidebarPanel.ClientSize.Height - 116;
 
         _connectionLabel.Text = "Virtual Xbox controller";
         _connectionLabel.AutoSize = false;
@@ -265,12 +261,12 @@ internal sealed class MainForm : Form
             using var brush = new SolidBrush(_bridge.Status.IsEnabled ? Color.FromArgb(90, 250, 178) : Color.FromArgb(110, 126, 148));
             e.Graphics.FillEllipse(brush, 0, 0, 8, 8);
         };
-        statusCard.Controls.Add(_connectionLabel);
-        statusCard.Controls.Add(_sidebarStatusLabel);
-        statusCard.Controls.Add(_statusDot);
-        sidebar.Controls.Add(statusCard);
+        _sidebarStatusCard.Controls.Add(_connectionLabel);
+        _sidebarStatusCard.Controls.Add(_sidebarStatusLabel);
+        _sidebarStatusCard.Controls.Add(_statusDot);
+        _sidebarPanel.Controls.Add(_sidebarStatusCard);
 
-        return sidebar;
+        return _sidebarPanel;
     }
 
     private void AddNavButton(FlowLayoutPanel nav, string text, int tabIndex)
@@ -986,6 +982,11 @@ internal sealed class MainForm : Form
         _logBox.ForeColor = fore;
         _logBox.BorderStyle = BorderStyle.None;
         _quickOptionsContent.BackColor = Color.Transparent;
+        _sidebarPanel.BackColor = back;
+        _controllerPowerPanel.BackColor = back;
+        _sidebarNavPanel.BackColor = back;
+        _sidebarStatusCard.BackColor = back;
+        _sidebarStatusCard.Invalidate();
         _quickOptionsPanel.Invalidate();
         HighlightNav(_selectedPageIndex);
     }
