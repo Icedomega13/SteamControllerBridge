@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.7
+
+- Replaced inactive sidebar category artwork with matched inverted versions.
+
 ## 0.6.6
 
 - Unified the left sidebar background to the darker app color.

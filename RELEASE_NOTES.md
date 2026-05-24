@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.6.6
+# Steam Controller Bridge v0.6.7
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -23,10 +23,9 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes diagnostic logging.
 
-## Changes in 0.6.6
+## Changes in 0.6.7
 
-- Unified the left sidebar background to the darker app color.
-- Reduced contrast around the controller, navigation, and connection status areas.
+- Replaced inactive sidebar category artwork with matched inverted versions for cleaner active/inactive transitions.
 
 ## Requirements
 
@@ -53,5 +52,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.6.6.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.6.6.zip`
+- `SteamControllerBridgeSetup-0.6.7.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.6.7.zip`
