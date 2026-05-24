@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.6.0
+# Steam Controller Bridge v0.6.1
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -23,12 +23,12 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes dark mode and diagnostic logging.
 
-## Changes in 0.6.0
+## Changes in 0.6.1
 
-- Redesigned the main window with a professional dark sidebar layout.
-- Added a larger status header and prominent On/Off control.
-- Reworked quick controls and advanced navigation around Presets, Buttons, Keyboard, Motion, and Logs.
-- Added custom rounded panel styling and refreshed dark theme colors.
+- Removed the obsolete Hide advanced button.
+- Hid duplicate top tabs now that sidebar navigation is primary.
+- Fixed the sidebar connection card to show Connected while the bridge is active.
+- Replaced the placeholder icon mark with a controller-style glyph.
 
 ## Requirements
 
@@ -55,5 +55,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.6.0.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.6.0.zip`
+- `SteamControllerBridgeSetup-0.6.1.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.6.1.zip`

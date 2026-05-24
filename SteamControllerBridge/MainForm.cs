@@ -12,7 +12,6 @@ internal sealed class MainForm : Form
     private readonly CheckBox _enableSwitch = new();
     private readonly FlowLayoutPanel _quickOptionsPanel = new();
     private readonly TextBox _logBox = new();
-    private readonly Button _advancedButton = new();
     private readonly Panel _advancedPanel = new();
     private readonly Label _connectionLabel = new();
     private readonly Label _sidebarStatusLabel = new();
@@ -50,7 +49,6 @@ internal sealed class MainForm : Form
     private readonly Icon _appIcon;
     private bool _updatingSwitch;
     private bool _updatingOptions;
-    private bool _advancedVisible;
     private ControllerInput? _capturingKeyboardInput;
 
     public MainForm()
@@ -184,19 +182,8 @@ internal sealed class MainForm : Form
         _quickOptionsPanel.Padding = new Padding(18, 14, 18, 14);
         _quickOptionsPanel.Margin = new Padding(0, 0, 0, 22);
 
-        _advancedButton.Text = "Hide advanced";
-        _advancedButton.AutoSize = false;
-        _advancedButton.Width = 140;
-        _advancedButton.Height = 34;
-        _advancedButton.Margin = new Padding(14, 0, 0, 0);
-        _advancedButton.FlatStyle = FlatStyle.Flat;
-        _advancedButton.FlatAppearance.BorderSize = 0;
-        _advancedButton.Click += (_, _) => ToggleAdvanced();
-        _quickOptionsPanel.Controls.Add(_advancedButton);
-
         BuildAdvancedPanel();
         _advancedPanel.Visible = true;
-        _advancedVisible = true;
 
         main.Controls.Add(header, 0, 0);
         main.Controls.Add(_quickOptionsPanel, 0, 1);
@@ -229,9 +216,7 @@ internal sealed class MainForm : Form
             using var pen = new Pen(Color.FromArgb(95, 242, 186), 2);
             e.Graphics.FillRoundedRectangle(fill, new Rectangle(10, 10, 84, 84), 18);
             e.Graphics.DrawRoundedRectangle(pen, new Rectangle(10, 10, 84, 84), 18);
-            using var font = new Font("Segoe UI Symbol", 34, FontStyle.Regular);
-            using var brush = new SolidBrush(Color.FromArgb(103, 255, 196));
-            e.Graphics.DrawString("◇", font, brush, 34, 28);
+            DrawControllerGlyph(e.Graphics, new Rectangle(27, 35, 50, 36), Color.FromArgb(103, 255, 196));
         };
         sidebar.Controls.Add(iconPanel);
 
@@ -388,8 +373,12 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Fill,
             HotTrack = true,
             Padding = new Point(12, 5),
-            Margin = new Padding(0)
+            Margin = new Padding(0),
+            Appearance = TabAppearance.FlatButtons,
+            SizeMode = TabSizeMode.Fixed,
+            ItemSize = new Size(0, 1)
         };
+        tabs.Multiline = true;
         _contentTabs = tabs;
 
         tabs.TabPages.Add(BuildPresetTab());
@@ -962,15 +951,9 @@ internal sealed class MainForm : Form
 
         _statusLabel.Text = status.HasError ? "Needs attention" : status.IsEnabled ? "Ready" : "Idle";
         _detailLabel.Text = status.Message;
+        _sidebarStatusLabel.Text = status.IsEnabled ? "Connected" : status.IsWorking ? "Working" : "Disconnected";
         _trayIcon.Text = ClampTrayText($"Steam Controller Bridge - {status.Message}");
         ApplyTheme();
-    }
-
-    private void ToggleAdvanced()
-    {
-        _advancedVisible = !_advancedVisible;
-        _advancedPanel.Visible = _advancedVisible;
-        _advancedButton.Text = _advancedVisible ? "Hide advanced" : "Advanced";
     }
 
     private void ApplyTheme()
@@ -998,8 +981,6 @@ internal sealed class MainForm : Form
         _logBox.BorderStyle = BorderStyle.None;
         _enableSwitch.BackColor = _bridge.Status.IsEnabled ? success : disabled;
         _enableSwitch.ForeColor = _bridge.Status.IsEnabled ? Color.White : fore;
-        _advancedButton.BackColor = button;
-        _advancedButton.ForeColor = fore;
         _quickOptionsPanel.Invalidate();
         HighlightNav(_contentTabs?.SelectedIndex ?? 1);
     }
@@ -1059,6 +1040,38 @@ internal sealed class MainForm : Form
             button.ForeColor = active ? Color.FromArgb(114, 255, 202) : Color.FromArgb(203, 214, 231);
             button.FlatAppearance.MouseOverBackColor = active ? Color.FromArgb(35, 126, 100) : Color.FromArgb(18, 31, 49);
         }
+    }
+
+    private static void DrawControllerGlyph(Graphics graphics, Rectangle bounds, Color color)
+    {
+        using var pen = new Pen(color, 3)
+        {
+            StartCap = System.Drawing.Drawing2D.LineCap.Round,
+            EndCap = System.Drawing.Drawing2D.LineCap.Round,
+            LineJoin = System.Drawing.Drawing2D.LineJoin.Round
+        };
+        using var brush = new SolidBrush(color);
+
+        var body = new[]
+        {
+            new Point(bounds.Left + 11, bounds.Top + 7),
+            new Point(bounds.Left + 20, bounds.Top + 1),
+            new Point(bounds.Left + 30, bounds.Top + 1),
+            new Point(bounds.Left + 39, bounds.Top + 7),
+            new Point(bounds.Right - 1, bounds.Top + 24),
+            new Point(bounds.Right - 8, bounds.Bottom - 1),
+            new Point(bounds.Left + 33, bounds.Top + 24),
+            new Point(bounds.Left + 17, bounds.Top + 24),
+            new Point(bounds.Left + 8, bounds.Bottom - 1),
+            new Point(bounds.Left + 1, bounds.Top + 24)
+        };
+        graphics.DrawClosedCurve(pen, body, 0.25f, System.Drawing.Drawing2D.FillMode.Winding);
+
+        graphics.DrawLine(pen, bounds.Left + 13, bounds.Top + 14, bounds.Left + 25, bounds.Top + 14);
+        graphics.DrawLine(pen, bounds.Left + 19, bounds.Top + 8, bounds.Left + 19, bounds.Top + 20);
+        graphics.FillEllipse(brush, bounds.Right - 18, bounds.Top + 10, 5, 5);
+        graphics.FillEllipse(brush, bounds.Right - 10, bounds.Top + 17, 5, 5);
+        graphics.FillEllipse(brush, bounds.Right - 25, bounds.Top + 18, 5, 5);
     }
 
     private void StartBridgeAsync()

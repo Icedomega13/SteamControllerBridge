@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1
+
+- Removed the obsolete Hide advanced button.
+- Hid the duplicate top tabs so sidebar navigation is the primary navigation.
+- Fixed the sidebar connection text to show Connected when the bridge is active.
+- Replaced the placeholder diamond with a controller-style glyph.
+
 ## 0.6.0
 
 - Redesigned the main window with a professional dark sidebar layout.
