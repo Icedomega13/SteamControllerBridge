@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.6.3
+# Steam Controller Bridge v0.6.4
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -23,10 +23,11 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
 - Includes diagnostic logging.
 
-## Changes in 0.6.3
+## Changes in 0.6.4
 
-- Added deep Valve HID diagnostics to Copy Diagnostics so support reports show detected Valve VID/PID, usage page, report lengths, and device paths.
-- Moved Start with Windows and Back off when Steam opens into the always-visible quick controls.
+- Added custom active and inactive sidebar category artwork.
+- Softened the controller power artwork edges so the on/off images blend into the sidebar.
+- Removed the hard white content frame by replacing the hidden tab shell with a borderless page host.
 
 ## Requirements
 
@@ -53,5 +54,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.6.3.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.6.3.zip`
+- `SteamControllerBridgeSetup-0.6.4.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.6.4.zip`

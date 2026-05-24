@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.4
+
+- Added custom active and inactive sidebar category artwork.
+- Softened the controller power artwork edges so it blends into the sidebar.
+- Replaced the hidden tab shell with a borderless page host to remove the hard white content frame.
+
 ## 0.6.3
 
 - Added deep Valve HID diagnostics to Copy Diagnostics for troubleshooting unsupported or hidden controller interfaces.

@@ -18,7 +18,11 @@ internal sealed class MainForm : Form
     private readonly PictureBox _controllerPowerImage = new();
     private readonly ToolTip _toolTip = new();
     private readonly Dictionary<string, Button> _navButtons = new();
-    private TabControl? _contentTabs;
+    private readonly Dictionary<int, Image> _navActiveImages = new();
+    private readonly Dictionary<int, Image> _navInactiveImages = new();
+    private readonly Panel _contentHost = new();
+    private readonly List<Control> _contentPages = new();
+    private int _selectedPageIndex = 1;
     private readonly Dictionary<PhysicalButton, ComboBox> _buttonMapCombos = new();
     private readonly Dictionary<PhysicalButton, CheckBox> _turboChecks = new();
     private readonly Dictionary<ControllerInput, TextBox> _keyboardKeyBoxes = new();
@@ -61,8 +65,9 @@ internal sealed class MainForm : Form
         KeyPreview = true;
         _appIcon = LoadAppIcon();
         Icon = _appIcon;
-        _controllerOnImage = LoadImageAsset("ControllerON.png");
-        _controllerOffImage = LoadImageAsset("ControllerOFF.png");
+        _controllerOnImage = LoadSoftImageAsset("ControllerON.png");
+        _controllerOffImage = LoadSoftImageAsset("ControllerOFF.png");
+        LoadNavigationImages();
 
         _trayIcon = new NotifyIcon
         {
@@ -89,6 +94,11 @@ internal sealed class MainForm : Form
             _appIcon.Dispose();
             _controllerOnImage?.Dispose();
             _controllerOffImage?.Dispose();
+            foreach (var image in _navActiveImages.Values.Concat(_navInactiveImages.Values))
+            {
+                image.Dispose();
+            }
+
             _toolTip.Dispose();
         };
 
@@ -181,20 +191,16 @@ internal sealed class MainForm : Form
 
         var iconPanel = new Panel
         {
-            Width = 104,
-            Height = 104,
-            Left = 45,
-            Top = 24
-        };
-        iconPanel.Paint += (_, e) =>
-        {
-            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using var pen = new Pen(Color.FromArgb(45, 68, 96));
-            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, iconPanel.Width - 1, iconPanel.Height - 1), 16);
+            Width = 120,
+            Height = 120,
+            Left = 37,
+            Top = 18
         };
         _controllerPowerImage.Dock = DockStyle.Fill;
         _controllerPowerImage.Margin = new Padding(0);
+        _controllerPowerImage.Padding = new Padding(4);
         _controllerPowerImage.SizeMode = PictureBoxSizeMode.Zoom;
+        _controllerPowerImage.BackColor = Color.Transparent;
         _controllerPowerImage.Cursor = Cursors.Hand;
         _controllerPowerImage.Click += (_, _) => ToggleBridgeFromIcon();
         _toolTip.SetToolTip(_controllerPowerImage, "Click to connect or disconnect");
@@ -206,9 +212,10 @@ internal sealed class MainForm : Form
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             Width = 196,
-            Height = 360,
+            Height = 420,
             Left = 16,
-            Top = 168
+            Top = 168,
+            BackColor = Color.Transparent
         };
 
         AddNavButton(nav, "Presets", 0);
@@ -271,23 +278,24 @@ internal sealed class MainForm : Form
         var button = new Button
         {
             Text = text,
+            Name = text,
             Width = 196,
-            Height = 48,
+            Height = 58,
             TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(18, 0, 0, 0),
-            Margin = new Padding(0, 0, 0, 10),
+            Padding = new Padding(0),
+            Margin = new Padding(0, 0, 0, 8),
             FlatStyle = FlatStyle.Flat,
-            Font = new Font(Font.FontFamily, 10, FontStyle.Regular),
+            Font = new Font(Font.FontFamily, 10, FontStyle.Bold),
+            BackgroundImageLayout = ImageLayout.Stretch,
             Tag = tabIndex
         };
         button.FlatAppearance.BorderSize = 0;
+        button.FlatAppearance.MouseDownBackColor = Color.FromArgb(24, 48, 68);
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(18, 31, 49);
+        _toolTip.SetToolTip(button, text);
         button.Click += (_, _) =>
         {
-            if (_contentTabs is not null)
-            {
-                _contentTabs.SelectedIndex = tabIndex;
-                HighlightNav(tabIndex);
-            }
+            SelectPage(tabIndex);
         };
         _navButtons[text] = button;
         nav.Controls.Add(button);
@@ -351,30 +359,48 @@ internal sealed class MainForm : Form
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
         ConfigureCombo(_gyroToggleCombo, Enum.GetValues<GyroToggleButton>());
 
-        var tabs = new TabControl
-        {
-            Dock = DockStyle.Fill,
-            HotTrack = true,
-            Padding = new Point(12, 5),
-            Margin = new Padding(0),
-            Appearance = TabAppearance.FlatButtons,
-            SizeMode = TabSizeMode.Fixed,
-            ItemSize = new Size(0, 1)
-        };
-        tabs.Multiline = true;
-        _contentTabs = tabs;
+        _contentHost.Dock = DockStyle.Fill;
+        _contentHost.Margin = new Padding(0);
+        _contentHost.Padding = new Padding(0);
+        _contentHost.BackColor = Color.FromArgb(7, 18, 33);
+        _contentPages.Clear();
 
-        tabs.TabPages.Add(BuildPresetTab());
-        tabs.TabPages.Add(BuildButtonsTab());
-        tabs.TabPages.Add(BuildKeyboardTab());
-        tabs.TabPages.Add(BuildMotionTab());
-        tabs.TabPages.Add(BuildLogsTab());
-        tabs.SelectedIndexChanged += (_, _) => HighlightNav(tabs.SelectedIndex);
-        tabs.SelectedIndex = 1;
-        _advancedPanel.Controls.Add(tabs);
+        AddContentPage(BuildPresetTab());
+        AddContentPage(BuildButtonsTab());
+        AddContentPage(BuildKeyboardTab());
+        AddContentPage(BuildMotionTab());
+        AddContentPage(BuildLogsTab());
+
+        _advancedPanel.Controls.Add(_contentHost);
+        SelectPage(1);
     }
 
-    private TabPage BuildPresetTab()
+    private void AddContentPage(Control page)
+    {
+        page.Dock = DockStyle.Fill;
+        page.Margin = new Padding(0);
+        page.Visible = false;
+        _contentPages.Add(page);
+        _contentHost.Controls.Add(page);
+    }
+
+    private void SelectPage(int selectedIndex)
+    {
+        if (selectedIndex < 0 || selectedIndex >= _contentPages.Count)
+        {
+            return;
+        }
+
+        for (var index = 0; index < _contentPages.Count; index++)
+        {
+            _contentPages[index].Visible = index == selectedIndex;
+        }
+
+        _selectedPageIndex = selectedIndex;
+        HighlightNav(selectedIndex);
+    }
+
+    private Control BuildPresetTab()
     {
         var tab = CreateTab("Presets");
         var layout = CreateFormLayout(3);
@@ -393,7 +419,7 @@ internal sealed class MainForm : Form
         return tab;
     }
 
-    private TabPage BuildButtonsTab()
+    private Control BuildButtonsTab()
     {
         var tab = CreateTab("Buttons");
         var scroller = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
@@ -431,7 +457,7 @@ internal sealed class MainForm : Form
         return tab;
     }
 
-    private TabPage BuildKeyboardTab()
+    private Control BuildKeyboardTab()
     {
         var tab = CreateTab("Keyboard");
         var scroller = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
@@ -469,7 +495,7 @@ internal sealed class MainForm : Form
         return tab;
     }
 
-    private TabPage BuildMotionTab()
+    private Control BuildMotionTab()
     {
         var tab = CreateTab("Motion");
         var layout = CreateFormLayout(2);
@@ -491,7 +517,7 @@ internal sealed class MainForm : Form
         return tab;
     }
 
-    private TabPage BuildLogsTab()
+    private Control BuildLogsTab()
     {
         var tab = CreateTab("Logs");
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(10) };
@@ -724,9 +750,13 @@ internal sealed class MainForm : Form
         layout.SetColumnSpan(panel, 5);
     }
 
-    private static TabPage CreateTab(string title)
+    private static Panel CreateTab(string title)
     {
-        return new TabPage(title) { Padding = new Padding(4) };
+        return new Panel
+        {
+            Padding = new Padding(0),
+            Margin = new Padding(0)
+        };
     }
 
     private static TableLayoutPanel CreateFormLayout(int columns)
@@ -947,7 +977,7 @@ internal sealed class MainForm : Form
         _logBox.ForeColor = fore;
         _logBox.BorderStyle = BorderStyle.None;
         _quickOptionsPanel.Invalidate();
-        HighlightNav(_contentTabs?.SelectedIndex ?? 1);
+        HighlightNav(_selectedPageIndex);
     }
 
     private static void ApplyThemeToControls(
@@ -1001,9 +1031,16 @@ internal sealed class MainForm : Form
         foreach (var button in _navButtons.Values)
         {
             var active = button.Tag is int index && index == selectedIndex;
-            button.BackColor = active ? Color.FromArgb(31, 112, 89) : Color.FromArgb(7, 18, 33);
-            button.ForeColor = active ? Color.FromArgb(114, 255, 202) : Color.FromArgb(203, 214, 231);
-            button.FlatAppearance.MouseOverBackColor = active ? Color.FromArgb(35, 126, 100) : Color.FromArgb(18, 31, 49);
+            var tabIndex = button.Tag is int indexValue ? indexValue : -1;
+            var hasImage = active
+                ? _navActiveImages.TryGetValue(tabIndex, out var navImage)
+                : _navInactiveImages.TryGetValue(tabIndex, out navImage);
+
+            button.BackgroundImage = hasImage ? navImage : null;
+            button.Text = hasImage ? string.Empty : button.Name;
+            button.BackColor = Color.FromArgb(7, 18, 33);
+            button.ForeColor = active ? Color.FromArgb(114, 255, 202) : Color.FromArgb(226, 234, 246);
+            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(13, 28, 47);
         }
     }
 
@@ -1162,6 +1199,30 @@ internal sealed class MainForm : Form
         return icon ?? SystemIcons.Application;
     }
 
+    private void LoadNavigationImages()
+    {
+        AddNavigationImages(0, "Presets.png", "presentsUNclicked.png");
+        AddNavigationImages(1, "Buttons.png", "buttonsUnClicked.png");
+        AddNavigationImages(2, "keyboard.png", "keyboardUNclicked.png");
+        AddNavigationImages(3, "motion.png", "MotionUNclicked.png");
+        AddNavigationImages(4, "logs.png", "LogsUNclicked.png");
+    }
+
+    private void AddNavigationImages(int index, string activeFile, string inactiveFile)
+    {
+        if (LoadImageAsset(activeFile) is { } active)
+        {
+            _navActiveImages[index] = CreateNavigationImage(active);
+            active.Dispose();
+        }
+
+        if (LoadImageAsset(inactiveFile) is { } inactive)
+        {
+            _navInactiveImages[index] = CreateNavigationImage(inactive);
+            inactive.Dispose();
+        }
+    }
+
     private static Image? LoadImageAsset(string fileName)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
@@ -1173,6 +1234,64 @@ internal sealed class MainForm : Form
         using var stream = File.OpenRead(path);
         using var image = Image.FromStream(stream);
         return new Bitmap(image);
+    }
+
+    private static Image? LoadSoftImageAsset(string fileName)
+    {
+        using var image = LoadImageAsset(fileName);
+        return image is null ? null : CreateSoftEdgeImage(image, 0.20f);
+    }
+
+    private static Bitmap CreateNavigationImage(Image source)
+    {
+        const int width = 392;
+        const int height = 116;
+        var cropAspect = width / (float)height;
+        var cropWidth = source.Width;
+        var cropHeight = Math.Min(source.Height, (int)(cropWidth / cropAspect));
+        var cropY = Math.Max(0, (source.Height - cropHeight) / 2);
+        var crop = new Rectangle(0, cropY, cropWidth, cropHeight);
+
+        var output = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+        using var graphics = Graphics.FromImage(output);
+        graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+        graphics.Clear(Color.Transparent);
+
+        using var clip = GraphicsExtensions.CreateRoundedRectangle(new Rectangle(0, 0, width, height), 12);
+        graphics.SetClip(clip);
+        graphics.DrawImage(source, new Rectangle(0, 0, width, height), crop, GraphicsUnit.Pixel);
+
+        using var veil = new SolidBrush(Color.FromArgb(58, 7, 18, 33));
+        graphics.FillRectangle(veil, 0, 0, width, height);
+        return output;
+    }
+
+    private static Bitmap CreateSoftEdgeImage(Image source, float fadeFraction)
+    {
+        var output = new Bitmap(source.Width, source.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+        using (var graphics = Graphics.FromImage(output))
+        {
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            graphics.DrawImage(source, 0, 0, source.Width, source.Height);
+        }
+
+        var fade = Math.Max(1, (int)(Math.Min(output.Width, output.Height) * fadeFraction));
+        for (var y = 0; y < output.Height; y++)
+        {
+            for (var x = 0; x < output.Width; x++)
+            {
+                var edgeDistance = Math.Min(Math.Min(x, output.Width - 1 - x), Math.Min(y, output.Height - 1 - y));
+                var alphaScale = Math.Clamp(edgeDistance / (float)fade, 0f, 1f);
+                alphaScale *= alphaScale;
+
+                var pixel = output.GetPixel(x, y);
+                output.SetPixel(x, y, Color.FromArgb((int)(pixel.A * alphaScale), pixel.R, pixel.G, pixel.B));
+            }
+        }
+
+        return output;
     }
 }
 
@@ -1190,7 +1309,7 @@ internal static class GraphicsExtensions
         graphics.DrawPath(pen, path);
     }
 
-    private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
+    public static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectangle(Rectangle bounds, int radius)
     {
         var diameter = radius * 2;
         var path = new System.Drawing.Drawing2D.GraphicsPath();
