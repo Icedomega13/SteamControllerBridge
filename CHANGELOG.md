@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2
+
+- Added the custom connected/disconnected controller artwork to the sidebar.
+- Moved the main connect/disconnect action onto the controller artwork.
+- Removed the obsolete dark mode toggle now that the app uses a permanent dark UI.
+- Removed the large header On/Off switch to reduce visual clutter.
+
 ## 0.6.1
 
 - Removed the obsolete Hide advanced button.

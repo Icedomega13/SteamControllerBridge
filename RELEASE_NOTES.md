@@ -1,4 +1,4 @@
-# Steam Controller Bridge v0.6.1
+# Steam Controller Bridge v0.6.2
 
 Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
@@ -21,14 +21,14 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Includes simple gyro mode with mouse or virtual right-stick output.
 - Includes optional rumble passthrough and a rumble toggle.
 - Includes Start with Windows and automatic Steam handoff/reconnect behavior.
-- Includes dark mode and diagnostic logging.
+- Includes diagnostic logging.
 
-## Changes in 0.6.1
+## Changes in 0.6.2
 
-- Removed the obsolete Hide advanced button.
-- Hid duplicate top tabs now that sidebar navigation is primary.
-- Fixed the sidebar connection card to show Connected while the bridge is active.
-- Replaced the placeholder icon mark with a controller-style glyph.
+- Added custom green/red controller artwork for connected and disconnected states.
+- Moved the primary connect/disconnect action onto the sidebar controller artwork.
+- Removed the obsolete dark mode toggle now that the UI is permanently dark.
+- Removed the large header On/Off switch for a cleaner layout.
 
 ## Requirements
 
@@ -55,5 +55,5 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.6.1.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.6.1.zip`
+- `SteamControllerBridgeSetup-0.6.2.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.6.2.zip`

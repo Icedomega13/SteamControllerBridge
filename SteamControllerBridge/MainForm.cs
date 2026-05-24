@@ -9,13 +9,14 @@ internal sealed class MainForm : Form
     private readonly NotifyIcon _trayIcon;
     private readonly Label _statusLabel = new();
     private readonly Label _detailLabel = new();
-    private readonly CheckBox _enableSwitch = new();
     private readonly FlowLayoutPanel _quickOptionsPanel = new();
     private readonly TextBox _logBox = new();
     private readonly Panel _advancedPanel = new();
     private readonly Label _connectionLabel = new();
     private readonly Label _sidebarStatusLabel = new();
     private readonly Panel _statusDot = new();
+    private readonly PictureBox _controllerPowerImage = new();
+    private readonly ToolTip _toolTip = new();
     private readonly Dictionary<string, Button> _navButtons = new();
     private TabControl? _contentTabs;
     private readonly Dictionary<PhysicalButton, ComboBox> _buttonMapCombos = new();
@@ -38,16 +39,15 @@ internal sealed class MainForm : Form
     private readonly CheckBox _trackpadClickCheck = new();
     private readonly CheckBox _gyroMouseCheck = new();
     private readonly CheckBox _rumbleCheck = new();
-    private readonly CheckBox _darkModeCheck = new();
     private readonly CheckBox _startWithWindowsCheck = new();
     private readonly CheckBox _autoDisableForSteamCheck = new();
     private readonly Button _openLogButton = new();
     private readonly Button _copyDiagnosticsButton = new();
     private readonly System.Windows.Forms.Timer _lifecycleTimer = new();
     private ToolStripMenuItem? _rumbleTrayItem;
-    private ToolStripMenuItem? _darkModeTrayItem;
     private readonly Icon _appIcon;
-    private bool _updatingSwitch;
+    private readonly Image? _controllerOnImage;
+    private readonly Image? _controllerOffImage;
     private bool _updatingOptions;
     private ControllerInput? _capturingKeyboardInput;
 
@@ -61,6 +61,8 @@ internal sealed class MainForm : Form
         KeyPreview = true;
         _appIcon = LoadAppIcon();
         Icon = _appIcon;
+        _controllerOnImage = LoadImageAsset("ControllerON.png");
+        _controllerOffImage = LoadImageAsset("ControllerOFF.png");
 
         _trayIcon = new NotifyIcon
         {
@@ -85,6 +87,9 @@ internal sealed class MainForm : Form
             _lifecycleTimer.Stop();
             _trayIcon.Dispose();
             _appIcon.Dispose();
+            _controllerOnImage?.Dispose();
+            _controllerOffImage?.Dispose();
+            _toolTip.Dispose();
         };
 
         ApplyStatus(_bridge.Status);
@@ -119,11 +124,10 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Top,
             AutoSize = true,
-            ColumnCount = 2,
+            ColumnCount = 1,
             Margin = new Padding(0, 0, 0, 24)
         };
         header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 250));
 
         var titleStack = new FlowLayoutPanel
         {
@@ -149,34 +153,7 @@ internal sealed class MainForm : Form
         titleStack.Controls.Add(_statusLabel);
         titleStack.Controls.Add(_detailLabel);
 
-        _enableSwitch.Text = "Off";
-        _enableSwitch.Appearance = Appearance.Button;
-        _enableSwitch.TextAlign = ContentAlignment.MiddleCenter;
-        _enableSwitch.Font = new Font(Font.FontFamily, 18, FontStyle.Bold);
-        _enableSwitch.Width = 220;
-        _enableSwitch.Height = 82;
-        _enableSwitch.Dock = DockStyle.Right;
-        _enableSwitch.Margin = new Padding(0);
-        _enableSwitch.FlatStyle = FlatStyle.Flat;
-        _enableSwitch.FlatAppearance.BorderSize = 0;
-        _enableSwitch.CheckedChanged += (_, _) =>
-        {
-            if (_updatingSwitch)
-            {
-                return;
-            }
-
-            if (_enableSwitch.Checked)
-            {
-                StartBridgeAsync();
-            }
-            else
-            {
-                StopBridgeAsync();
-            }
-        };
         header.Controls.Add(titleStack, 0, 0);
-        header.Controls.Add(_enableSwitch, 1, 0);
 
         BuildQuickOptions();
         _quickOptionsPanel.Padding = new Padding(18, 14, 18, 14);
@@ -212,12 +189,16 @@ internal sealed class MainForm : Form
         iconPanel.Paint += (_, e) =>
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using var fill = new SolidBrush(Color.FromArgb(36, 119, 96));
-            using var pen = new Pen(Color.FromArgb(95, 242, 186), 2);
-            e.Graphics.FillRoundedRectangle(fill, new Rectangle(10, 10, 84, 84), 18);
-            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(10, 10, 84, 84), 18);
-            DrawControllerGlyph(e.Graphics, new Rectangle(27, 35, 50, 36), Color.FromArgb(103, 255, 196));
+            using var pen = new Pen(Color.FromArgb(45, 68, 96));
+            e.Graphics.DrawRoundedRectangle(pen, new Rectangle(0, 0, iconPanel.Width - 1, iconPanel.Height - 1), 16);
         };
+        _controllerPowerImage.Dock = DockStyle.Fill;
+        _controllerPowerImage.Margin = new Padding(0);
+        _controllerPowerImage.SizeMode = PictureBoxSizeMode.Zoom;
+        _controllerPowerImage.Cursor = Cursors.Hand;
+        _controllerPowerImage.Click += (_, _) => ToggleBridgeFromIcon();
+        _toolTip.SetToolTip(_controllerPowerImage, "Click to connect or disconnect");
+        iconPanel.Controls.Add(_controllerPowerImage);
         sidebar.Controls.Add(iconPanel);
 
         var nav = new FlowLayoutPanel
@@ -342,19 +323,9 @@ internal sealed class MainForm : Form
         _gyroActivationCombo.Margin = new Padding(0, 0, 18, 0);
         _gyroActivationCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
 
-        _darkModeCheck.Text = "Dark mode";
-        _darkModeCheck.AutoSize = true;
-        _darkModeCheck.Margin = new Padding(0, 0, 0, 0);
-        _darkModeCheck.CheckedChanged += (_, _) =>
-        {
-            SaveOptionsFromUi();
-            ApplyTheme();
-        };
-
         _quickOptionsPanel.Controls.Add(_rumbleCheck);
         _quickOptionsPanel.Controls.Add(_gyroMouseCheck);
         _quickOptionsPanel.Controls.Add(_gyroActivationCombo);
-        _quickOptionsPanel.Controls.Add(_darkModeCheck);
     }
 
     private void BuildAdvancedPanel()
@@ -832,10 +803,7 @@ internal sealed class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         _rumbleTrayItem = new ToolStripMenuItem("Enable rumble") { CheckOnClick = true };
         _rumbleTrayItem.Click += (_, _) => _rumbleCheck.Checked = _rumbleTrayItem.Checked;
-        _darkModeTrayItem = new ToolStripMenuItem("Dark mode") { CheckOnClick = true };
-        _darkModeTrayItem.Click += (_, _) => _darkModeCheck.Checked = _darkModeTrayItem.Checked;
         menu.Items.Add(_rumbleTrayItem);
-        menu.Items.Add(_darkModeTrayItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", null, (_, _) =>
         {
@@ -879,7 +847,6 @@ internal sealed class MainForm : Form
         _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
-        _darkModeCheck.Checked = _bridge.Options.DarkModeEnabled;
         _updatingOptions = false;
         SyncTrayOptions();
     }
@@ -913,7 +880,6 @@ internal sealed class MainForm : Form
         _bridge.Options.AutoDisableForSteam = _autoDisableForSteamCheck.Checked;
         _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
-        _bridge.Options.DarkModeEnabled = _darkModeCheck.Checked;
         _bridge.SaveOptions();
         SyncTrayOptions();
     }
@@ -935,23 +901,17 @@ internal sealed class MainForm : Form
             _rumbleTrayItem.Checked = _rumbleCheck.Checked;
         }
 
-        if (_darkModeTrayItem is not null)
-        {
-            _darkModeTrayItem.Checked = _darkModeCheck.Checked;
-        }
     }
 
     private void ApplyStatus(BridgeStatus status)
     {
-        _updatingSwitch = true;
-        _enableSwitch.Checked = status.IsEnabled || status.IsWorking;
-        _enableSwitch.Enabled = !status.IsWorking;
-        _enableSwitch.Text = status.IsEnabled ? "On" : status.IsWorking ? "Working..." : "Off";
-        _updatingSwitch = false;
-
         _statusLabel.Text = status.HasError ? "Needs attention" : status.IsEnabled ? "Ready" : "Idle";
         _detailLabel.Text = status.Message;
         _sidebarStatusLabel.Text = status.IsEnabled ? "Connected" : status.IsWorking ? "Working" : "Disconnected";
+        _controllerPowerImage.Enabled = !status.IsWorking;
+        _controllerPowerImage.Cursor = status.IsWorking ? Cursors.WaitCursor : Cursors.Hand;
+        _controllerPowerImage.Image = status.IsEnabled ? _controllerOnImage : _controllerOffImage;
+        _toolTip.SetToolTip(_controllerPowerImage, status.IsEnabled ? "Click to disconnect" : "Click to connect");
         _trayIcon.Text = ClampTrayText($"Steam Controller Bridge - {status.Message}");
         ApplyTheme();
     }
@@ -965,9 +925,6 @@ internal sealed class MainForm : Form
         var muted = Color.FromArgb(151, 167, 190);
         var accent = Color.FromArgb(91, 244, 183);
         var button = Color.FromArgb(24, 43, 66);
-        var success = Color.FromArgb(30, 158, 106);
-        var disabled = Color.FromArgb(43, 54, 72);
-
         BackColor = back;
         ForeColor = fore;
         ApplyThemeToControls(Controls, back, panel, input, fore, button, accent);
@@ -979,8 +936,6 @@ internal sealed class MainForm : Form
         _logBox.BackColor = panel;
         _logBox.ForeColor = fore;
         _logBox.BorderStyle = BorderStyle.None;
-        _enableSwitch.BackColor = _bridge.Status.IsEnabled ? success : disabled;
-        _enableSwitch.ForeColor = _bridge.Status.IsEnabled ? Color.White : fore;
         _quickOptionsPanel.Invalidate();
         HighlightNav(_contentTabs?.SelectedIndex ?? 1);
     }
@@ -1042,38 +997,6 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static void DrawControllerGlyph(Graphics graphics, Rectangle bounds, Color color)
-    {
-        using var pen = new Pen(color, 3)
-        {
-            StartCap = System.Drawing.Drawing2D.LineCap.Round,
-            EndCap = System.Drawing.Drawing2D.LineCap.Round,
-            LineJoin = System.Drawing.Drawing2D.LineJoin.Round
-        };
-        using var brush = new SolidBrush(color);
-
-        var body = new[]
-        {
-            new Point(bounds.Left + 11, bounds.Top + 7),
-            new Point(bounds.Left + 20, bounds.Top + 1),
-            new Point(bounds.Left + 30, bounds.Top + 1),
-            new Point(bounds.Left + 39, bounds.Top + 7),
-            new Point(bounds.Right - 1, bounds.Top + 24),
-            new Point(bounds.Right - 8, bounds.Bottom - 1),
-            new Point(bounds.Left + 33, bounds.Top + 24),
-            new Point(bounds.Left + 17, bounds.Top + 24),
-            new Point(bounds.Left + 8, bounds.Bottom - 1),
-            new Point(bounds.Left + 1, bounds.Top + 24)
-        };
-        graphics.DrawClosedCurve(pen, body, 0.25f, System.Drawing.Drawing2D.FillMode.Winding);
-
-        graphics.DrawLine(pen, bounds.Left + 13, bounds.Top + 14, bounds.Left + 25, bounds.Top + 14);
-        graphics.DrawLine(pen, bounds.Left + 19, bounds.Top + 8, bounds.Left + 19, bounds.Top + 20);
-        graphics.FillEllipse(brush, bounds.Right - 18, bounds.Top + 10, 5, 5);
-        graphics.FillEllipse(brush, bounds.Right - 10, bounds.Top + 17, 5, 5);
-        graphics.FillEllipse(brush, bounds.Right - 25, bounds.Top + 18, 5, 5);
-    }
-
     private void StartBridgeAsync()
     {
         _ = Task.Run(() => _bridge.Start());
@@ -1082,6 +1005,23 @@ internal sealed class MainForm : Form
     private void StopBridgeAsync()
     {
         _ = Task.Run(() => _bridge.Stop());
+    }
+
+    private void ToggleBridgeFromIcon()
+    {
+        if (_bridge.Status.IsWorking)
+        {
+            return;
+        }
+
+        if (_bridge.Status.IsEnabled)
+        {
+            StopBridgeAsync();
+        }
+        else
+        {
+            StartBridgeAsync();
+        }
     }
 
     private void OpenLog()
@@ -1210,6 +1150,19 @@ internal sealed class MainForm : Form
     {
         var icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         return icon ?? SystemIcons.Application;
+    }
+
+    private static Image? LoadImageAsset(string fileName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        using var stream = File.OpenRead(path);
+        using var image = Image.FromStream(stream);
+        return new Bitmap(image);
     }
 }
 
