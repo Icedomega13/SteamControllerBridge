@@ -9,7 +9,7 @@ The intended experience is deliberately simple:
 3. Turn it on.
 4. Launch a Game Pass, Epic, emulator, or other XInput game.
 
-![Steam Controller Bridge main window](../docs/images/main-window.png)
+![Steam Controller Bridge main window](../docs/images/main-window.jpg)
 
 ## Install
 

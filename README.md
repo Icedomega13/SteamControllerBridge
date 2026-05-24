@@ -4,7 +4,7 @@ Steam Controller Bridge is a tiny Windows tray app that makes the 2026 Steam Con
 
 The goal is intentionally simple: connect the controller, turn the bridge on, and launch an XInput game. No Steam shortcut setup, no profile editor, no giant dashboard.
 
-![Steam Controller Bridge main window](docs/images/main-window.png)
+![Steam Controller Bridge main window](docs/images/main-window.jpg)
 
 ## Current Status
 
