@@ -323,9 +323,21 @@ internal sealed class MainForm : Form
         _gyroActivationCombo.Margin = new Padding(0, 0, 18, 0);
         _gyroActivationCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
 
+        _startWithWindowsCheck.Text = "Start with Windows";
+        _startWithWindowsCheck.AutoSize = true;
+        _startWithWindowsCheck.Margin = new Padding(0, 0, 18, 0);
+        _startWithWindowsCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
+        _autoDisableForSteamCheck.Text = "Back off when Steam opens";
+        _autoDisableForSteamCheck.AutoSize = true;
+        _autoDisableForSteamCheck.Margin = new Padding(0, 0, 0, 0);
+        _autoDisableForSteamCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
         _quickOptionsPanel.Controls.Add(_rumbleCheck);
         _quickOptionsPanel.Controls.Add(_gyroMouseCheck);
         _quickOptionsPanel.Controls.Add(_gyroActivationCombo);
+        _quickOptionsPanel.Controls.Add(_startWithWindowsCheck);
+        _quickOptionsPanel.Controls.Add(_autoDisableForSteamCheck);
     }
 
     private void BuildAdvancedPanel()
@@ -463,7 +475,7 @@ internal sealed class MainForm : Form
         var layout = CreateFormLayout(2);
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var row = 0; row < 10; row++)
+        for (var row = 0; row < 8; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -475,8 +487,6 @@ internal sealed class MainForm : Form
         AddOptionRow(layout, 4, "Mouse pad", _trackpadSourceCombo);
         AddCheckRow(layout, 5, _trackpadMouseCheck, "Use trackpad as mouse");
         AddCheckRow(layout, 6, _trackpadClickCheck, "Trackpad click is left click");
-        AddCheckRow(layout, 7, _startWithWindowsCheck, "Start with Windows");
-        AddCheckRow(layout, 8, _autoDisableForSteamCheck, "Back off when Steam opens");
         tab.Controls.Add(layout);
         return tab;
     }

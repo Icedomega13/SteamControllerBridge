@@ -137,6 +137,114 @@ internal sealed class HidDevice : IDisposable
             .Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
+    public static IEnumerable<HidInterfaceInfo> EnumerateInterfaces()
+    {
+        HidD_GetHidGuid(out var hidGuid);
+        var infoSet = SetupDiGetClassDevs(ref hidGuid, null, IntPtr.Zero, DigcfPresent | DigcfDeviceInterface);
+        if (infoSet == IntPtr.Zero || infoSet == new IntPtr(-1))
+        {
+            yield break;
+        }
+
+        try
+        {
+            var index = 0u;
+            var interfaceData = new SpDeviceInterfaceData { cbSize = Marshal.SizeOf<SpDeviceInterfaceData>() };
+            while (SetupDiEnumDeviceInterfaces(infoSet, IntPtr.Zero, ref hidGuid, index++, ref interfaceData))
+            {
+                SetupDiGetDeviceInterfaceDetail(infoSet, ref interfaceData, IntPtr.Zero, 0, out var required, IntPtr.Zero);
+                var detail = Marshal.AllocHGlobal((int)required);
+                try
+                {
+                    Marshal.WriteInt32(detail, IntPtr.Size == 8 ? 8 : 6);
+                    if (!SetupDiGetDeviceInterfaceDetail(infoSet, ref interfaceData, detail, required, out _, IntPtr.Zero))
+                    {
+                        continue;
+                    }
+
+                    var path = Marshal.PtrToStringUni(detail + 4);
+                    if (string.IsNullOrWhiteSpace(path))
+                    {
+                        continue;
+                    }
+
+                    var canOpenMetadata = false;
+                    ushort vendorId = 0;
+                    ushort productId = 0;
+                    ushort versionNumber = 0;
+                    ushort usagePage = 0;
+                    ushort usage = 0;
+                    ushort inputLength = 0;
+                    ushort outputLength = 0;
+                    ushort featureLength = 0;
+                    string? openError = null;
+
+                    using var handle = CreateFile(path, 0, FileShareRead | FileShareWrite,
+                        IntPtr.Zero, OpenExisting, 0, IntPtr.Zero);
+                    if (handle.IsInvalid)
+                    {
+                        openError = $"metadata open failed: {Marshal.GetLastWin32Error()}";
+                    }
+                    else
+                    {
+                        canOpenMetadata = true;
+                        var attributes = new HiddAttributes { Size = Marshal.SizeOf<HiddAttributes>() };
+                        if (HidD_GetAttributes(handle, ref attributes))
+                        {
+                            vendorId = attributes.VendorID;
+                            productId = attributes.ProductID;
+                            versionNumber = attributes.VersionNumber;
+                        }
+                        else
+                        {
+                            openError = $"attributes failed: {Marshal.GetLastWin32Error()}";
+                        }
+
+                        if (HidD_GetPreparsedData(handle, out var preparsedData))
+                        {
+                            try
+                            {
+                                if (HidP_GetCaps(preparsedData, out var caps) == HidpStatusSuccess)
+                                {
+                                    usagePage = caps.UsagePage;
+                                    usage = caps.Usage;
+                                    inputLength = caps.InputReportByteLength;
+                                    outputLength = caps.OutputReportByteLength;
+                                    featureLength = caps.FeatureReportByteLength;
+                                }
+                            }
+                            finally
+                            {
+                                HidD_FreePreparsedData(preparsedData);
+                            }
+                        }
+                    }
+
+                    yield return new HidInterfaceInfo(
+                        path,
+                        vendorId,
+                        productId,
+                        versionNumber,
+                        usagePage,
+                        usage,
+                        inputLength,
+                        outputLength,
+                        featureLength,
+                        canOpenMetadata,
+                        openError);
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(detail);
+                }
+            }
+        }
+        finally
+        {
+            SetupDiDestroyDeviceInfoList(infoSet);
+        }
+    }
+
     public async Task<int> ReadReportAsync(byte[] buffer, TimeSpan timeout, CancellationToken token)
     {
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -280,3 +388,16 @@ internal sealed class HidDevice : IDisposable
         public ushort NumberFeatureDataIndices;
     }
 }
+
+internal sealed record HidInterfaceInfo(
+    string Path,
+    ushort VendorId,
+    ushort ProductId,
+    ushort VersionNumber,
+    ushort UsagePage,
+    ushort Usage,
+    ushort InputReportLength,
+    ushort OutputReportLength,
+    ushort FeatureReportLength,
+    bool CanOpenMetadata,
+    string? OpenError);

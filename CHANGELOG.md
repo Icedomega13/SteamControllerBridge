@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.3
+
+- Added deep Valve HID diagnostics to Copy Diagnostics for troubleshooting unsupported or hidden controller interfaces.
+- Moved Start with Windows and Back off when Steam opens into the always-visible quick controls.
+
 ## 0.6.2
 
 - Added the custom connected/disconnected controller artwork to the sidebar.
