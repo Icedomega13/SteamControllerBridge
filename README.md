@@ -16,18 +16,18 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.4.0.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.6.7.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
-6. Open Steam Controller Bridge and click `On`.
+6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
 
 The installer does not install ViGEmBus automatically. If ViGEmBus is missing, the app will show a clear status message when you turn the bridge on.
 
 ## First Run
 
 - Keep Steam closed while testing the bridge.
-- Use the main `On` button first before changing advanced options.
-- Use Advanced only when you want button remaps, turbo, trackpad mouse, startup, or Steam handoff settings.
+- Use the controller icon in the upper-left corner to turn the bridge on or off.
+- Use the sidebar pages when you want presets, button remaps, keyboard mappings, turbo, trackpad mouse, gyro, logs, startup, or Steam handoff settings.
 - For Nintendo-style layouts, set physical `A` to output `B` and physical `B` to output `A`.
 - If a game sees double input, close Steam and any other controller remapping tools.
 
@@ -43,9 +43,11 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
 - One-click remap presets, including Nintendo swap and FPS gyro options
 - Optional trackpad-as-mouse mode
 - Optional gyro output to mouse or the virtual right stick
+- Keyboard key mapping for controller buttons, triggers, pad clicks, and back paddles
+- Universal turbo speed control and trigger turbo toggles
 - Start with Windows toggle
 - Automatic Steam handoff and reconnect attempts
-- Optional dark mode
+- Deep HID diagnostics for troubleshooting controller detection
 - Lizard mode disable while enabled
 - Lizard mode restore on normal shutdown
 - Custom app/tray icon

@@ -18,7 +18,7 @@ The intended experience is deliberately simple:
 3. Run the installer or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
-6. Click `On`.
+6. Click the controller icon in the upper-left corner.
 
 The installer does not install ViGEmBus automatically. If ViGEmBus is missing, the app reports that in the main window.
 
@@ -39,11 +39,12 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
   - Steam button as Guide
 - Passes Xbox rumble through to Steam Controller haptics on a best-effort basis.
 - Provides optional trackpad mouse mode.
-- Saves simple advanced options, including full button remapping, keyboard mapping, turbo toggles, startup, Steam handoff, and dark mode.
+- Saves options for full button remapping, keyboard mapping, turbo toggles, startup, Steam handoff, trackpad mouse, and gyro behavior.
 - Includes one-click remap presets and gyro output to mouse or virtual right stick.
 - Can back off when Steam starts and reconnect when Steam closes.
+- Includes deep HID diagnostics for support reports.
 - Restores lizard mode when turned off or when the app exits normally.
-- Keeps advanced options and the log hidden behind one button.
+- Uses sidebar navigation for presets, button mapping, keyboard mapping, motion, and logs.
 
 ## Requirements
 
@@ -69,6 +70,6 @@ dotnet run
 
 Steam should be closed for this MVP. Steam can claim the controller, which prevents direct raw HID access.
 
-Trackpad-as-stick, HidHide duplicate suppression, native motion output, and a better virtual-device backend are intentionally left out of this pass so the core switch stays reliable.
+Trackpad-as-stick, HidHide duplicate suppression, native motion output, and a better virtual-device backend are intentionally left out for now so the core bridge stays reliable.
 
 Steam Controller haptics are implemented from public output-report behavior and may need tuning on real hardware.
