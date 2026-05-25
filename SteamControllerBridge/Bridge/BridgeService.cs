@@ -30,11 +30,13 @@ internal sealed class BridgeService : IDisposable
 
     public BridgeStatus Status { get; private set; } = BridgeStatus.Idle("Off");
     public BridgeOptions Options { get; private set; } = BridgeOptionsStore.Load();
+    public InputSnapshot LatestInputSnapshot { get; private set; } = InputSnapshot.Empty;
 
     public BridgeService()
     {
         _keyboard.LogWritten += (_, message) => Log(message);
         _fpsInput.LogWritten += (_, message) => Log(message);
+        LoadStartupProfileIfConfigured();
     }
 
     public void SaveOptions()
@@ -49,10 +51,57 @@ internal sealed class BridgeService : IDisposable
 
     public void LoadOptions(BridgeOptions options)
     {
+        var appSettings = CaptureAppSettings(Options);
         options.Normalize();
+        RestoreAppSettings(options, appSettings);
         Options = options;
         SaveOptions();
     }
+
+    private void LoadStartupProfileIfConfigured()
+    {
+        Options.Normalize();
+        if (string.IsNullOrWhiteSpace(Options.StartupProfileName) || !BridgeProfileStore.Exists(Options.StartupProfileName))
+        {
+            return;
+        }
+
+        var appSettings = CaptureAppSettings(Options);
+        try
+        {
+            var profile = BridgeProfileStore.Load(Options.StartupProfileName);
+            RestoreAppSettings(profile, appSettings);
+            Options = profile;
+            Log($"Loaded startup profile: {Options.StartupProfileName}");
+        }
+        catch (Exception ex)
+        {
+            Log($"Startup profile failed to load: {ex.Message}");
+        }
+    }
+
+    private static AppSettings CaptureAppSettings(BridgeOptions options)
+    {
+        return new AppSettings(
+            options.StartWithWindows,
+            options.StartMinimizedToTray,
+            options.AutoDisableForSteam,
+            options.StartupProfileName);
+    }
+
+    private static void RestoreAppSettings(BridgeOptions options, AppSettings appSettings)
+    {
+        options.StartWithWindows = appSettings.StartWithWindows;
+        options.StartMinimizedToTray = appSettings.StartMinimizedToTray;
+        options.AutoDisableForSteam = appSettings.AutoDisableForSteam;
+        options.StartupProfileName = appSettings.StartupProfileName;
+    }
+
+    private readonly record struct AppSettings(
+        bool StartWithWindows,
+        bool StartMinimizedToTray,
+        bool AutoDisableForSteam,
+        string StartupProfileName);
 
     public void TickLifecycle()
     {
@@ -153,6 +202,7 @@ internal sealed class BridgeService : IDisposable
 
                 SetStatus(BridgeStatus.Enabled("Virtual Xbox controller on"));
                 Log("Virtual Xbox 360 controller is active.");
+                PlayPowerChime(activate: true);
             }
             catch (VigemBusNotFoundException)
             {
@@ -192,6 +242,7 @@ internal sealed class BridgeService : IDisposable
         }
 
         SetStatus(BridgeStatus.Working("Turning off..."));
+        PlayPowerChime(activate: false);
         StopReadLoop();
         _mouse.Reset();
         _gyroMouse.Reset();
@@ -203,6 +254,27 @@ internal sealed class BridgeService : IDisposable
         CleanupController(restoreLizard);
         SetStatus(userRequested ? BridgeStatus.Idle("Off") : BridgeStatus.Failed("Paused"));
         Log(userRequested ? "Bridge stopped." : "Bridge paused.");
+    }
+
+    private void PlayPowerChime(bool activate)
+    {
+        if (!Options.PowerHapticChimeEnabled || _controller is null)
+        {
+            return;
+        }
+
+        var notes = activate
+            ? new ushort[] { 440, 660 }
+            : new ushort[] { 660, 330 };
+        foreach (var note in notes)
+        {
+            _controller.PlayHapticTone(0, note, 120);
+            _controller.PlayHapticTone(1, note, 120);
+            Thread.Sleep(55);
+        }
+
+        _controller.StopHapticTone(0);
+        _controller.StopHapticTone(1);
     }
 
     private async Task ReadLoop(CancellationToken token)
@@ -222,6 +294,7 @@ internal sealed class BridgeService : IDisposable
                 }
 
                 var input = new SteamControllerInput(buffer.AsSpan(0, count));
+                LatestInputSnapshot = InputSnapshot.FromInput(input);
                 UpdateGyroToggle(input);
                 _virtualController?.Update(input, Options, _gyroAllowed);
                 _keyboard.Update(input, Options);

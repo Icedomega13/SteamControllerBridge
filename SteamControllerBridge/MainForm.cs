@@ -12,6 +12,7 @@ internal sealed class MainForm : Form
     private readonly Panel _quickOptionsPanel = new();
     private readonly FlowLayoutPanel _quickOptionsContent = new();
     private readonly TextBox _logBox = new();
+    private readonly System.Windows.Forms.Timer _inputTestTimer = new();
     private readonly Panel _advancedPanel = new();
     private readonly Panel _sidebarPanel = new();
     private readonly Panel _controllerPowerPanel = new();
@@ -35,13 +36,22 @@ internal sealed class MainForm : Form
     private readonly Dictionary<ControllerInput, TextBox> _keyboardKeyBoxes = new();
     private readonly ComboBox _presetCombo = new();
     private readonly Button _applyPresetButton = new();
+    private readonly TestControllerView _testControllerView = new();
+    private readonly Button _testFrontButton = new();
+    private readonly Button _testBackButton = new();
+    private readonly Label _testContextLabel = new();
+    private readonly Dictionary<string, Label> _testValueLabels = new();
     private readonly ComboBox _profileCombo = new();
+    private readonly ComboBox _startupProfileCombo = new();
     private readonly TextBox _profileNameBox = new();
+    private readonly Label _profileDirtyLabel = new();
     private readonly Button _loadProfileButton = new();
     private readonly Button _saveProfileButton = new();
     private readonly Button _importProfileButton = new();
     private readonly Button _exportProfileButton = new();
     private readonly Button _deleteProfileButton = new();
+    private readonly Button _duplicateProfileButton = new();
+    private readonly Button _resetDefaultButton = new();
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly ComboBox _gyroActivationCombo = new();
     private readonly ComboBox _gyroToggleCombo = new();
@@ -62,7 +72,9 @@ internal sealed class MainForm : Form
     private readonly Label _rightStickMouseSensitivityValue = new();
     private readonly CheckBox _gyroMouseCheck = new();
     private readonly CheckBox _rumbleCheck = new();
+    private readonly CheckBox _powerHapticChimeCheck = new();
     private readonly CheckBox _startWithWindowsCheck = new();
+    private readonly CheckBox _startMinimizedToTrayCheck = new();
     private readonly CheckBox _autoDisableForSteamCheck = new();
     private readonly Button _openLogButton = new();
     private readonly Button _copyDiagnosticsButton = new();
@@ -72,8 +84,13 @@ internal sealed class MainForm : Form
     private readonly Image? _controllerOnImage;
     private readonly Image? _controllerOffImage;
     private readonly Image? _logoAsset;
+    private readonly Image? _controllerFrontImage;
+    private readonly Image? _controllerBackImage;
     private bool _updatingOptions;
     private ControllerInput? _capturingKeyboardInput;
+    private bool _testBackView;
+    private string? _loadedProfileName;
+    private string _loadedProfileSignature = string.Empty;
 
     public MainForm()
     {
@@ -88,6 +105,8 @@ internal sealed class MainForm : Form
         _controllerOnImage = LoadSoftImageAsset("ControllerON.png");
         _controllerOffImage = LoadSoftImageAsset("ControllerOFF.png");
         _logoAsset = LoadImageAsset("Logo.png");
+        _controllerFrontImage = LoadImageAsset("controllerfront.png");
+        _controllerBackImage = LoadImageAsset("ControllerBack.png");
         LoadNavigationImages();
 
         _trayIcon = new NotifyIcon
@@ -101,6 +120,9 @@ internal sealed class MainForm : Form
         _lifecycleTimer.Interval = 2500;
         _lifecycleTimer.Tick += (_, _) => Task.Run(() => _bridge.TickLifecycle());
         _lifecycleTimer.Start();
+        _inputTestTimer.Interval = 50;
+        _inputTestTimer.Tick += (_, _) => UpdateInputTest();
+        _inputTestTimer.Start();
 
         BuildUi();
         LoadOptionsIntoUi();
@@ -111,11 +133,14 @@ internal sealed class MainForm : Form
         {
             _bridge.Dispose();
             _lifecycleTimer.Stop();
+            _inputTestTimer.Stop();
             _trayIcon.Dispose();
             _appIcon.Dispose();
             _controllerOnImage?.Dispose();
             _controllerOffImage?.Dispose();
             _logoAsset?.Dispose();
+            _controllerFrontImage?.Dispose();
+            _controllerBackImage?.Dispose();
             foreach (var image in _navActiveImages.Values.Concat(_navInactiveImages.Values))
             {
                 image.Dispose();
@@ -252,7 +277,8 @@ internal sealed class MainForm : Form
             1 => "Buttons",
             2 => "Keyboard",
             3 => "Motion",
-            4 => "Logs",
+            4 => "Input Test",
+            5 => "Logs",
             _ => "Presets"
         };
     }
@@ -283,16 +309,17 @@ internal sealed class MainForm : Form
         _sidebarNavPanel.FlowDirection = FlowDirection.TopDown;
         _sidebarNavPanel.WrapContents = false;
         _sidebarNavPanel.Width = 120;
-        _sidebarNavPanel.Height = 430;
+        _sidebarNavPanel.Height = 500;
         _sidebarNavPanel.Left = 55;
-        _sidebarNavPanel.Top = 168;
+        _sidebarNavPanel.Top = 150;
         _sidebarNavPanel.BackColor = Color.FromArgb(7, 18, 33);
 
         AddNavButton(_sidebarNavPanel, "Presets", 0);
         AddNavButton(_sidebarNavPanel, "Buttons", 1);
         AddNavButton(_sidebarNavPanel, "Keyboard", 2);
         AddNavButton(_sidebarNavPanel, "Motion", 3);
-        AddNavButton(_sidebarNavPanel, "Logs", 4);
+        AddNavButton(_sidebarNavPanel, "Test", 4);
+        AddNavButton(_sidebarNavPanel, "Logs", 5);
         _sidebarPanel.Controls.Add(_sidebarNavPanel);
 
         _sidebarStatusCard.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
@@ -348,10 +375,10 @@ internal sealed class MainForm : Form
             Text = string.Empty,
             Name = text,
             Width = 120,
-            Height = 72,
+            Height = 76,
             TextAlign = ContentAlignment.MiddleCenter,
             Padding = new Padding(0),
-            Margin = new Padding(0, 0, 0, 14),
+            Margin = new Padding(0, 0, 0, 6),
             FlatStyle = FlatStyle.Flat,
             Font = new Font(Font.FontFamily, 10, FontStyle.Bold),
             BackgroundImageLayout = ImageLayout.Zoom,
@@ -397,20 +424,22 @@ internal sealed class MainForm : Form
         _rumbleCheck.Margin = new Padding(0, 0, 18, 0);
         _rumbleCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
 
-        _gyroMouseCheck.Text = "Gyro aim";
-        _gyroMouseCheck.AutoSize = true;
-        _gyroMouseCheck.Margin = new Padding(0, 0, 18, 0);
-        _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
-
-        ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
-        _gyroActivationCombo.Width = 130;
-        _gyroActivationCombo.Margin = new Padding(0, 0, 18, 0);
-        _gyroActivationCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
+        _powerHapticChimeCheck.Text = "Power chime";
+        _powerHapticChimeCheck.AutoSize = true;
+        _powerHapticChimeCheck.Margin = new Padding(0, 0, 18, 0);
+        _powerHapticChimeCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        _toolTip.SetToolTip(_powerHapticChimeCheck, "Play a short haptic chirp when the bridge turns on or off.");
 
         _startWithWindowsCheck.Text = "Start with Windows";
         _startWithWindowsCheck.AutoSize = true;
         _startWithWindowsCheck.Margin = new Padding(0, 0, 18, 0);
         _startWithWindowsCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
+        _startMinimizedToTrayCheck.Text = "Start minimized";
+        _startMinimizedToTrayCheck.AutoSize = true;
+        _startMinimizedToTrayCheck.Margin = new Padding(0, 0, 18, 0);
+        _startMinimizedToTrayCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        _toolTip.SetToolTip(_startMinimizedToTrayCheck, "Hide the main window on launch and keep Steam Controller Bridge in the system tray.");
 
         _autoDisableForSteamCheck.Text = "Back off when Steam opens";
         _autoDisableForSteamCheck.AutoSize = true;
@@ -418,9 +447,9 @@ internal sealed class MainForm : Form
         _autoDisableForSteamCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
 
         _quickOptionsContent.Controls.Add(_rumbleCheck);
-        _quickOptionsContent.Controls.Add(_gyroMouseCheck);
-        _quickOptionsContent.Controls.Add(_gyroActivationCombo);
+        _quickOptionsContent.Controls.Add(_powerHapticChimeCheck);
         _quickOptionsContent.Controls.Add(_startWithWindowsCheck);
+        _quickOptionsContent.Controls.Add(_startMinimizedToTrayCheck);
         _quickOptionsContent.Controls.Add(_autoDisableForSteamCheck);
         _quickOptionsPanel.Controls.Add(_quickOptionsContent);
     }
@@ -434,6 +463,8 @@ internal sealed class MainForm : Form
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
         ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
         ConfigureCombo(_profileCombo, Array.Empty<string>());
+        ConfigureCombo(_startupProfileCombo, Array.Empty<string>());
+        ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
         ConfigureCombo(_gyroToggleCombo, Enum.GetValues<GyroToggleButton>());
 
@@ -447,6 +478,7 @@ internal sealed class MainForm : Form
         AddContentPage(BuildButtonsTab());
         AddContentPage(BuildKeyboardTab());
         AddContentPage(BuildMotionTab());
+        AddContentPage(BuildInputTestTab());
         AddContentPage(BuildLogsTab());
 
         _advancedPanel.Controls.Add(_contentHost);
@@ -486,17 +518,28 @@ internal sealed class MainForm : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-        for (var row = 0; row < 5; row++)
+        for (var row = 0; row < 8; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        AddOptionRow(layout, 0, "Preset", _presetCombo);
+        var presetHeader = new Label
+        {
+            Text = "Built-in presets",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Font = new Font(Font, FontStyle.Bold),
+            Margin = new Padding(0, 0, 8, 4)
+        };
+        layout.Controls.Add(presetHeader, 0, 0);
+        layout.SetColumnSpan(presetHeader, 3);
+
+        AddOptionRow(layout, 1, "Preset", _presetCombo);
         _applyPresetButton.Text = "Apply";
         _applyPresetButton.Height = 32;
         _applyPresetButton.Dock = DockStyle.Fill;
         _applyPresetButton.Click += (_, _) => ApplySelectedPreset();
-        layout.Controls.Add(_applyPresetButton, 2, 0);
+        layout.Controls.Add(_applyPresetButton, 2, 1);
 
         var profileHeader = new Label
         {
@@ -506,12 +549,15 @@ internal sealed class MainForm : Form
             Font = new Font(Font, FontStyle.Bold),
             Margin = new Padding(0, 18, 8, 4)
         };
-        layout.Controls.Add(profileHeader, 0, 1);
+        layout.Controls.Add(profileHeader, 0, 2);
 
-        AddOptionRow(layout, 2, "Profile", _profileCombo);
+        AddOptionRow(layout, 3, "Profile", _profileCombo);
         ConfigureSmallButton(_loadProfileButton, "Load");
         _loadProfileButton.Click += (_, _) => LoadSelectedProfile();
-        layout.Controls.Add(_loadProfileButton, 2, 2);
+        layout.Controls.Add(_loadProfileButton, 2, 3);
+
+        AddOptionRow(layout, 4, "Load on startup", _startupProfileCombo);
+        _startupProfileCombo.SelectedIndexChanged += (_, _) => SaveStartupProfileFromUi();
 
         _profileNameBox.Dock = DockStyle.Fill;
         _profileNameBox.Margin = new Padding(0, 7, 8, 0);
@@ -522,26 +568,168 @@ internal sealed class MainForm : Form
             Anchor = AnchorStyles.Left,
             Margin = new Padding(0, 9, 8, 0)
         };
-        layout.Controls.Add(saveLabel, 0, 3);
-        layout.Controls.Add(_profileNameBox, 1, 3);
+        layout.Controls.Add(saveLabel, 0, 5);
+        layout.Controls.Add(_profileNameBox, 1, 5);
         ConfigureSmallButton(_saveProfileButton, "Save");
         _saveProfileButton.Click += (_, _) => SaveProfile();
-        layout.Controls.Add(_saveProfileButton, 2, 3);
+        layout.Controls.Add(_saveProfileButton, 2, 5);
+
+        _profileDirtyLabel.Text = "No profile loaded";
+        _profileDirtyLabel.AutoSize = true;
+        _profileDirtyLabel.Margin = new Padding(0, 7, 0, 0);
+        layout.Controls.Add(_profileDirtyLabel, 1, 6);
+        layout.SetColumnSpan(_profileDirtyLabel, 2);
 
         var profileActions = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, Margin = new Padding(0, 8, 0, 0) };
         ConfigureSmallButton(_importProfileButton, "Import");
         ConfigureSmallButton(_exportProfileButton, "Export");
+        ConfigureSmallButton(_duplicateProfileButton, "Duplicate");
         ConfigureSmallButton(_deleteProfileButton, "Delete");
+        ConfigureSmallButton(_resetDefaultButton, "Reset Default");
         _importProfileButton.Click += (_, _) => ImportProfile();
         _exportProfileButton.Click += (_, _) => ExportSelectedProfile();
+        _duplicateProfileButton.Click += (_, _) => DuplicateSelectedProfile();
         _deleteProfileButton.Click += (_, _) => DeleteSelectedProfile();
+        _resetDefaultButton.Click += (_, _) => ResetToDefaultXbox();
         profileActions.Controls.Add(_importProfileButton);
         profileActions.Controls.Add(_exportProfileButton);
+        profileActions.Controls.Add(_duplicateProfileButton);
         profileActions.Controls.Add(_deleteProfileButton);
-        layout.Controls.Add(profileActions, 1, 4);
+        profileActions.Controls.Add(_resetDefaultButton);
+        layout.Controls.Add(profileActions, 1, 7);
         layout.SetColumnSpan(profileActions, 2);
         tab.Controls.Add(layout);
         return tab;
+    }
+
+    private Control BuildInputTestTab()
+    {
+        var tab = CreateTab("Input Test");
+        var layout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            RowCount = 2,
+            Padding = new Padding(10)
+        };
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var togglePanel = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            FlowDirection = FlowDirection.LeftToRight,
+            Margin = new Padding(0, 0, 0, 10)
+        };
+        ConfigureSegmentButton(_testFrontButton, "Front");
+        ConfigureSegmentButton(_testBackButton, "Back");
+        _testFrontButton.Click += (_, _) => SetInputTestView(backView: false);
+        _testBackButton.Click += (_, _) => SetInputTestView(backView: true);
+        togglePanel.Controls.Add(_testFrontButton);
+        togglePanel.Controls.Add(_testBackButton);
+
+        _testContextLabel.Text = "Front controls";
+        _testContextLabel.AutoSize = true;
+        _testContextLabel.Font = new Font(Font.FontFamily, 11, FontStyle.Bold);
+        _testContextLabel.Margin = new Padding(14, 8, 0, 0);
+        togglePanel.Controls.Add(_testContextLabel);
+        layout.Controls.Add(togglePanel, 0, 0);
+        layout.SetColumnSpan(togglePanel, 2);
+
+        _testControllerView.Dock = DockStyle.Fill;
+        _testControllerView.Margin = new Padding(0, 0, 18, 0);
+        _testControllerView.FrontImage = _controllerFrontImage;
+        _testControllerView.BackImage = _controllerBackImage;
+        layout.Controls.Add(_testControllerView, 0, 1);
+
+        var statusPanel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            ColumnCount = 2,
+            Padding = new Padding(12),
+            Margin = new Padding(0)
+        };
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48));
+        AddTestHeader(statusPanel, "Physical Input", 0);
+        AddTestValue(statusPanel, "Face", "Face buttons", 1);
+        AddTestValue(statusPanel, "DPad", "D-pad", 2);
+        AddTestValue(statusPanel, "Shoulders", "Shoulders", 3);
+        AddTestValue(statusPanel, "Paddles", "Paddles", 4);
+        AddTestValue(statusPanel, "Pads", "Trackpads", 5);
+        AddTestValue(statusPanel, "Triggers", "Triggers", 6);
+        AddTestValue(statusPanel, "Sticks", "Sticks", 7);
+        AddTestHeader(statusPanel, "Motion", 8);
+        AddTestValue(statusPanel, "Gyro", "Gyro", 9);
+        AddTestValue(statusPanel, "Accel", "Accel", 10);
+        AddTestValue(statusPanel, "Fresh", "Report age", 11);
+        layout.Controls.Add(statusPanel, 1, 1);
+
+        tab.Controls.Add(layout);
+        SetInputTestView(backView: false);
+        UpdateInputTest();
+        return tab;
+    }
+
+    private void ConfigureSegmentButton(Button button, string text)
+    {
+        button.Text = text;
+        button.Width = 86;
+        button.Height = 34;
+        button.Margin = new Padding(0, 0, 8, 0);
+        button.FlatStyle = FlatStyle.Flat;
+        button.FlatAppearance.BorderSize = 0;
+        button.Font = new Font(Font.FontFamily, 9, FontStyle.Bold);
+    }
+
+    private void AddTestHeader(TableLayoutPanel layout, string text, int row)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var label = new Label
+        {
+            Text = text,
+            AutoSize = true,
+            Font = new Font(Font.FontFamily, 10, FontStyle.Bold),
+            Margin = new Padding(0, row == 0 ? 0 : 16, 0, 8)
+        };
+        layout.Controls.Add(label, 0, row);
+        layout.SetColumnSpan(label, 2);
+    }
+
+    private void AddTestValue(TableLayoutPanel layout, string key, string labelText, int row)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var label = new Label
+        {
+            Text = labelText,
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 4, 12, 4)
+        };
+        var value = new Label
+        {
+            Text = "-",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 4, 0, 4),
+            Font = new Font(Font.FontFamily, 9, FontStyle.Bold)
+        };
+        _testValueLabels[key] = value;
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(value, 1, row);
+    }
+
+    private void SetInputTestView(bool backView)
+    {
+        _testBackView = backView;
+        _testControllerView.BackView = backView;
+        _testContextLabel.Text = backView ? "Back controls" : "Front controls";
+        _testFrontButton.BackColor = backView ? Color.FromArgb(24, 43, 66) : Color.FromArgb(37, 74, 63);
+        _testBackButton.BackColor = backView ? Color.FromArgb(37, 74, 63) : Color.FromArgb(24, 43, 66);
+        _testControllerView.Invalidate();
     }
 
     private Control BuildButtonsTab()
@@ -631,17 +819,18 @@ internal sealed class MainForm : Form
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
 
-        AddOptionRow(layout, 0, "Gyro output", _gyroOutputCombo);
-        AddOptionRow(layout, 1, "Gyro toggle", _gyroToggleCombo);
-        AddGyroSensitivityRow(layout, 2);
-        AddNumericRow(layout, 3, "Gyro deadzone", _gyroStickDeadZoneInput, 0, 300);
-        AddOptionRow(layout, 4, "Mouse pad", _trackpadSourceCombo);
-        AddCheckRow(layout, 5, _trackpadMouseCheck, "Use trackpad as mouse");
-        AddCheckRow(layout, 6, _trackpadClickCheck, "Trackpad click is left click");
-        AddCheckRow(layout, 7, _leftStickWasdCheck, "Left stick sends WASD");
-        AddCheckRow(layout, 8, _rightStickMouseCheck, "Right stick controls mouse");
-        AddRightStickSensitivityRow(layout, 9);
-        AddCheckRow(layout, 10, _invertRightStickYCheck, "Invert right-stick vertical mouse");
+        AddGyroAimRow(layout, 0);
+        AddOptionRow(layout, 1, "Gyro output", _gyroOutputCombo);
+        AddOptionRow(layout, 2, "Gyro toggle", _gyroToggleCombo);
+        AddGyroSensitivityRow(layout, 3);
+        AddNumericRow(layout, 4, "Gyro deadzone", _gyroStickDeadZoneInput, 0, 300);
+        AddOptionRow(layout, 5, "Mouse pad", _trackpadSourceCombo);
+        AddCheckRow(layout, 6, _trackpadMouseCheck, "Use trackpad as mouse");
+        AddCheckRow(layout, 7, _trackpadClickCheck, "Trackpad click is left click");
+        AddCheckRow(layout, 8, _leftStickWasdCheck, "Left stick sends WASD");
+        AddCheckRow(layout, 9, _rightStickMouseCheck, "Right stick controls mouse");
+        AddRightStickSensitivityRow(layout, 10);
+        AddCheckRow(layout, 11, _invertRightStickYCheck, "Invert right-stick vertical mouse");
         tab.Controls.Add(layout);
         return tab;
     }
@@ -690,7 +879,7 @@ internal sealed class MainForm : Form
         button.Text = text;
         button.Height = 32;
         button.AutoSize = false;
-        button.Width = 88;
+        button.Width = Math.Max(88, TextRenderer.MeasureText(text, SystemFonts.MessageBoxFont).Width + 24);
         button.Margin = new Padding(0, 6, 8, 0);
     }
 
@@ -918,6 +1107,42 @@ internal sealed class MainForm : Form
         layout.Controls.Add(checkBox, 1, row);
     }
 
+    private void AddGyroAimRow(TableLayoutPanel layout, int row)
+    {
+        var label = new Label
+        {
+            Text = "Gyro aim",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 6, 8, 0)
+        };
+
+        var panel = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            Margin = new Padding(0)
+        };
+
+        _gyroMouseCheck.Text = "Enabled";
+        _gyroMouseCheck.AutoSize = true;
+        _gyroMouseCheck.Margin = new Padding(0, 6, 18, 0);
+        _gyroMouseCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+
+        _gyroActivationCombo.Dock = DockStyle.None;
+        _gyroActivationCombo.Width = 170;
+        _gyroActivationCombo.Margin = new Padding(0, 2, 0, 0);
+        _gyroActivationCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
+
+        panel.Controls.Add(_gyroMouseCheck);
+        panel.Controls.Add(_gyroActivationCombo);
+
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+    }
+
     private void AddGyroSensitivityRow(TableLayoutPanel layout, int row)
     {
         var label = new Label
@@ -1062,9 +1287,11 @@ internal sealed class MainForm : Form
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
         _bridge.Options.StartWithWindows = StartupManager.IsEnabled();
         _startWithWindowsCheck.Checked = _bridge.Options.StartWithWindows;
+        _startMinimizedToTrayCheck.Checked = _bridge.Options.StartMinimizedToTray;
         _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
+        _powerHapticChimeCheck.Checked = _bridge.Options.PowerHapticChimeEnabled;
         RefreshProfiles();
         _updatingOptions = false;
         SyncTrayOptions();
@@ -1100,11 +1327,15 @@ internal sealed class MainForm : Form
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;
         _bridge.Options.StartWithWindows = _startWithWindowsCheck.Checked;
+        _bridge.Options.StartMinimizedToTray = _startMinimizedToTrayCheck.Checked;
         _bridge.Options.AutoDisableForSteam = _autoDisableForSteamCheck.Checked;
+        _bridge.Options.StartupProfileName = SelectedStartupProfileName();
         _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
+        _bridge.Options.PowerHapticChimeEnabled = _powerHapticChimeCheck.Checked;
         _bridge.SaveOptions();
         SyncTrayOptions();
+        UpdateProfileDirtyState();
     }
 
     private void ApplySelectedPreset()
@@ -1114,16 +1345,24 @@ internal sealed class MainForm : Form
         _bridge.SaveOptions();
         LoadOptionsIntoUi();
         _presetCombo.SelectedItem = preset;
+        _loadedProfileName = null;
+        _loadedProfileSignature = string.Empty;
+        UpdateProfileDirtyState();
         AppendLog($"{DateTime.Now:HH:mm:ss}  Applied preset: {preset}");
     }
 
     private void RefreshProfiles(string? selectedProfile = null)
     {
         var current = selectedProfile ?? _profileCombo.SelectedItem as string;
+        var startup = _bridge.Options.StartupProfileName;
         _profileCombo.Items.Clear();
-        foreach (var profile in BridgeProfileStore.ListProfiles())
+        _startupProfileCombo.Items.Clear();
+        _startupProfileCombo.Items.Add("<None>");
+        var profiles = BridgeProfileStore.ListProfiles();
+        foreach (var profile in profiles)
         {
             _profileCombo.Items.Add(profile);
+            _startupProfileCombo.Items.Add(profile);
         }
 
         if (current is not null && _profileCombo.Items.Contains(current))
@@ -1138,7 +1377,19 @@ internal sealed class MainForm : Form
         var hasSelection = _profileCombo.SelectedItem is not null;
         _loadProfileButton.Enabled = hasSelection;
         _exportProfileButton.Enabled = hasSelection;
+        _duplicateProfileButton.Enabled = hasSelection;
         _deleteProfileButton.Enabled = hasSelection;
+
+        if (!string.IsNullOrWhiteSpace(startup) && _startupProfileCombo.Items.Contains(startup))
+        {
+            _startupProfileCombo.SelectedItem = startup;
+        }
+        else
+        {
+            _startupProfileCombo.SelectedIndex = 0;
+        }
+
+        UpdateProfileDirtyState();
     }
 
     private void SaveProfile()
@@ -1151,9 +1402,21 @@ internal sealed class MainForm : Form
         }
 
         SaveOptionsFromUi();
+        if (BridgeProfileStore.Exists(name))
+        {
+            var confirm = MessageBox.Show(this, $"Replace existing profile '{name}'?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+        }
+
         BridgeProfileStore.Save(name, _bridge.Options);
+        _loadedProfileName = name;
+        _loadedProfileSignature = BridgeProfileStore.GetProfileSignature(_bridge.Options);
         RefreshProfiles(name);
         _profileNameBox.Text = name;
+        UpdateProfileDirtyState();
         AppendLog($"{DateTime.Now:HH:mm:ss}  Saved profile: {name}");
     }
 
@@ -1165,8 +1428,12 @@ internal sealed class MainForm : Form
         }
 
         _bridge.LoadOptions(BridgeProfileStore.Load(name));
+        _loadedProfileName = name;
+        _loadedProfileSignature = BridgeProfileStore.GetProfileSignature(_bridge.Options);
         LoadOptionsIntoUi();
         RefreshProfiles(name);
+        _profileNameBox.Text = name;
+        UpdateProfileDirtyState();
         AppendLog($"{DateTime.Now:HH:mm:ss}  Loaded profile: {name}");
     }
 
@@ -1185,13 +1452,24 @@ internal sealed class MainForm : Form
 
         try
         {
+            var importName = BridgeProfileStore.SanitizeProfileName(Path.GetFileNameWithoutExtension(dialog.FileName));
+            if (BridgeProfileStore.Exists(importName))
+            {
+                var confirm = MessageBox.Show(this, $"Replace existing profile '{importName}'?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (confirm != DialogResult.Yes)
+                {
+                    return;
+                }
+            }
+
             var name = BridgeProfileStore.Import(dialog.FileName);
             RefreshProfiles(name);
+            MessageBox.Show(this, $"Imported profile '{name}'.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
             AppendLog($"{DateTime.Now:HH:mm:ss}  Imported profile: {name}");
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"Could not import profile:\n{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, $"That file is not a valid Steam Controller Bridge profile.\n\n{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -1215,7 +1493,47 @@ internal sealed class MainForm : Form
         }
 
         BridgeProfileStore.Export(name, dialog.FileName);
+        MessageBox.Show(this, $"Exported profile '{name}'.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         AppendLog($"{DateTime.Now:HH:mm:ss}  Exported profile: {name}");
+    }
+
+    private void DuplicateSelectedProfile()
+    {
+        if (_profileCombo.SelectedItem is not string name)
+        {
+            return;
+        }
+
+        var copyName = BridgeProfileStore.SanitizeProfileName($"{name} Copy");
+        var baseName = copyName;
+        var index = 2;
+        while (BridgeProfileStore.Exists(copyName))
+        {
+            copyName = $"{baseName} {index++}";
+        }
+
+        BridgeProfileStore.Save(copyName, BridgeProfileStore.Load(name));
+        RefreshProfiles(copyName);
+        _profileNameBox.Text = copyName;
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Duplicated profile: {name} -> {copyName}");
+    }
+
+    private void ResetToDefaultXbox()
+    {
+        var confirm = MessageBox.Show(this, "Reset current settings to Default Xbox?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes)
+        {
+            return;
+        }
+
+        _bridge.Options.ApplyPreset(RemapPreset.DefaultXbox);
+        _bridge.SaveOptions();
+        _loadedProfileName = null;
+        _loadedProfileSignature = string.Empty;
+        LoadOptionsIntoUi();
+        _presetCombo.SelectedItem = RemapPreset.DefaultXbox;
+        UpdateProfileDirtyState();
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Reset settings to Default Xbox.");
     }
 
     private void DeleteSelectedProfile()
@@ -1232,8 +1550,56 @@ internal sealed class MainForm : Form
         }
 
         BridgeProfileStore.Delete(name);
+        if (_loadedProfileName == name)
+        {
+            _loadedProfileName = null;
+            _loadedProfileSignature = string.Empty;
+        }
+
+        if (_bridge.Options.StartupProfileName == name)
+        {
+            _bridge.Options.StartupProfileName = string.Empty;
+            _bridge.SaveOptions();
+        }
+
         RefreshProfiles();
+        UpdateProfileDirtyState();
         AppendLog($"{DateTime.Now:HH:mm:ss}  Deleted profile: {name}");
+    }
+
+    private void SaveStartupProfileFromUi()
+    {
+        if (_updatingOptions)
+        {
+            return;
+        }
+
+        _bridge.Options.StartupProfileName = SelectedStartupProfileName();
+        _bridge.SaveOptions();
+    }
+
+    private string SelectedStartupProfileName()
+    {
+        return _startupProfileCombo.SelectedItem is string profile && profile != "<None>" ? profile : string.Empty;
+    }
+
+    private void UpdateProfileDirtyState()
+    {
+        if (_profileDirtyLabel.IsDisposed)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_loadedProfileName))
+        {
+            _profileDirtyLabel.Text = "No profile loaded";
+            _profileDirtyLabel.ForeColor = Color.FromArgb(151, 167, 190);
+            return;
+        }
+
+        var dirty = BridgeProfileStore.GetProfileSignature(_bridge.Options) != _loadedProfileSignature;
+        _profileDirtyLabel.Text = dirty ? $"Unsaved changes to {_loadedProfileName}" : $"Loaded: {_loadedProfileName}";
+        _profileDirtyLabel.ForeColor = dirty ? Color.FromArgb(255, 208, 120) : Color.FromArgb(91, 244, 183);
     }
 
     private void SyncTrayOptions()
@@ -1243,6 +1609,46 @@ internal sealed class MainForm : Form
             _rumbleTrayItem.Checked = _rumbleCheck.Checked;
         }
 
+    }
+
+    private void UpdateInputTest()
+    {
+        if (_testValueLabels.Count == 0)
+        {
+            return;
+        }
+
+        var snapshot = _bridge.LatestInputSnapshot;
+        _testControllerView.Snapshot = snapshot;
+        _testControllerView.Invalidate();
+
+        SetTestValue("Face", JoinActive(("A", snapshot.A), ("B", snapshot.B), ("X", snapshot.X), ("Y", snapshot.Y)));
+        SetTestValue("DPad", JoinActive(("Up", snapshot.DPadUp), ("Down", snapshot.DPadDown), ("Left", snapshot.DPadLeft), ("Right", snapshot.DPadRight)));
+        SetTestValue("Shoulders", JoinActive(("LB", snapshot.LeftShoulder), ("RB", snapshot.RightShoulder)));
+        SetTestValue("Paddles", JoinActive(("L4", snapshot.L4), ("L5", snapshot.L5), ("R4", snapshot.R4), ("R5", snapshot.R5)));
+        SetTestValue("Pads", JoinActive(("L touch", snapshot.LeftPadTouched), ("L click", snapshot.LeftPadClicked), ("R touch", snapshot.RightPadTouched), ("R click", snapshot.RightPadClicked)));
+        SetTestValue("Triggers", $"LT {snapshot.LeftTrigger,3}   RT {snapshot.RightTrigger,3}");
+        SetTestValue("Sticks", $"L {snapshot.LeftStickX,6},{snapshot.LeftStickY,6}   R {snapshot.RightStickX,6},{snapshot.RightStickY,6}");
+        SetTestValue("Gyro", $"{snapshot.GyroX,6} {snapshot.GyroY,6} {snapshot.GyroZ,6}");
+        SetTestValue("Accel", $"{snapshot.AccelX,6} {snapshot.AccelY,6} {snapshot.AccelZ,6}");
+        SetTestValue("Fresh", snapshot.IsFresh ? "Live" : "No recent report");
+    }
+
+    private void SetTestValue(string key, string value)
+    {
+        if (_testValueLabels.TryGetValue(key, out var label))
+        {
+            label.Text = value;
+            label.ForeColor = value is "-" or "No recent report"
+                ? Color.FromArgb(151, 167, 190)
+                : Color.FromArgb(91, 244, 183);
+        }
+    }
+
+    private static string JoinActive(params (string Name, bool Active)[] states)
+    {
+        var active = states.Where(state => state.Active).Select(state => state.Name).ToArray();
+        return active.Length == 0 ? "-" : string.Join(", ", active);
     }
 
     private void ApplyStatus(BridgeStatus status)
@@ -1481,6 +1887,19 @@ internal sealed class MainForm : Form
         }
     }
 
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        if (_bridge.Options.StartMinimizedToTray)
+        {
+            BeginInvoke(new Action(() =>
+            {
+                WindowState = FormWindowState.Minimized;
+                Hide();
+            }));
+        }
+    }
+
     private void OnUi(Action action)
     {
         if (IsDisposed)
@@ -1515,7 +1934,8 @@ internal sealed class MainForm : Form
         AddNavigationImages(1, "Buttons.png", "ButtonsUnclicked.png");
         AddNavigationImages(2, "Keyboard.png", "KeyboardUnclicked.png");
         AddNavigationImages(3, "Motion.png", "MotionUnclicked.png");
-        AddNavigationImages(4, "Logs.png", "LogsUnclicked.png");
+        AddNavigationImages(4, "Inputtest.png", "InputtestUnclicked.png");
+        AddNavigationImages(5, "Logs.png", "LogsUnclicked.png");
     }
 
     private void AddNavigationImages(int index, string activeFile, string inactiveFile)
@@ -1554,8 +1974,8 @@ internal sealed class MainForm : Form
 
     private static Bitmap CreateNavigationImage(Image source)
     {
-        const int width = 96;
-        const int height = 96;
+        const int width = 108;
+        const int height = 108;
         var cropAspect = width / (float)height;
         var cropHeight = source.Height;
         var cropWidth = Math.Min(source.Width, (int)(cropHeight * cropAspect));
@@ -1598,6 +2018,137 @@ internal sealed class MainForm : Form
         return output;
     }
 
+}
+
+internal sealed class TestControllerView : Control
+{
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? FrontImage { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Image? BackImage { get; set; }
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public InputSnapshot Snapshot { get; set; } = InputSnapshot.Empty;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool BackView { get; set; }
+
+    public TestControllerView()
+    {
+        DoubleBuffered = true;
+        MinimumSize = new Size(520, 360);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+        e.Graphics.Clear(Color.FromArgb(7, 18, 33));
+
+        var image = BackView ? BackImage : FrontImage;
+        if (image is null)
+        {
+            TextRenderer.DrawText(e.Graphics, "Controller image unavailable", Font, ClientRectangle, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            return;
+        }
+
+        var target = FitImage(image, ClientRectangle);
+        e.Graphics.DrawImage(image, target);
+
+        if (BackView)
+        {
+            DrawBackIndicators(e.Graphics, target);
+        }
+        else
+        {
+            DrawFrontIndicators(e.Graphics, target);
+        }
+    }
+
+    private void DrawFrontIndicators(Graphics graphics, RectangleF imageBounds)
+    {
+        var s = Snapshot;
+        DrawDot(graphics, imageBounds, 0.711f, 0.415f, "A", s.A);
+        DrawDot(graphics, imageBounds, 0.755f, 0.360f, "B", s.B);
+        DrawDot(graphics, imageBounds, 0.691f, 0.342f, "X", s.X);
+        DrawDot(graphics, imageBounds, 0.744f, 0.291f, "Y", s.Y);
+        DrawDot(graphics, imageBounds, 0.333f, 0.355f, "D", s.DPadUp || s.DPadDown || s.DPadLeft || s.DPadRight);
+        DrawDot(graphics, imageBounds, 0.464f, 0.373f, "L3", s.LeftThumb);
+        DrawDot(graphics, imageBounds, 0.586f, 0.373f, "R3", s.RightThumb);
+        DrawDot(graphics, imageBounds, 0.386f, 0.291f, "View", s.Back);
+        DrawDot(graphics, imageBounds, 0.609f, 0.291f, "Menu", s.Start);
+        DrawDot(graphics, imageBounds, 0.516f, 0.360f, "Steam", s.Guide);
+        DrawDot(graphics, imageBounds, 0.398f, 0.664f, "LP", s.LeftPadTouched || s.LeftPadClicked);
+        DrawDot(graphics, imageBounds, 0.626f, 0.664f, "RP", s.RightPadTouched || s.RightPadClicked);
+        DrawTriggerBar(graphics, imageBounds, 0.354f, 0.238f, "LT", s.LeftTrigger);
+        DrawTriggerBar(graphics, imageBounds, 0.652f, 0.238f, "RT", s.RightTrigger);
+        DrawStickVector(graphics, imageBounds, 0.432f, 0.399f, s.LeftStickX, s.LeftStickY);
+        DrawStickVector(graphics, imageBounds, 0.588f, 0.399f, s.RightStickX, s.RightStickY);
+    }
+
+    private void DrawBackIndicators(Graphics graphics, RectangleF imageBounds)
+    {
+        var s = Snapshot;
+        DrawTriggerBar(graphics, imageBounds, 0.332f, 0.259f, "LT", s.LeftTrigger);
+        DrawTriggerBar(graphics, imageBounds, 0.668f, 0.259f, "RT", s.RightTrigger);
+        DrawDot(graphics, imageBounds, 0.332f, 0.219f, "LB", s.LeftShoulder);
+        DrawDot(graphics, imageBounds, 0.668f, 0.219f, "RB", s.RightShoulder);
+        DrawDot(graphics, imageBounds, 0.653f, 0.634f, "L4", s.L4);
+        DrawDot(graphics, imageBounds, 0.671f, 0.792f, "L5", s.L5);
+        DrawDot(graphics, imageBounds, 0.352f, 0.634f, "R4", s.R4);
+        DrawDot(graphics, imageBounds, 0.334f, 0.792f, "R5", s.R5);
+    }
+
+    private void DrawDot(Graphics graphics, RectangleF imageBounds, float x, float y, string label, bool active)
+    {
+        var center = ToPoint(imageBounds, x, y);
+        var radius = active ? 16f : 11f;
+        var color = active ? Color.FromArgb(120, 91, 244, 183) : Color.FromArgb(88, 151, 167, 190);
+        using var fill = new SolidBrush(color);
+        using var pen = new Pen(active ? Color.FromArgb(91, 244, 183) : Color.FromArgb(151, 167, 190), active ? 3f : 1.5f);
+        var rect = new RectangleF(center.X - radius, center.Y - radius, radius * 2, radius * 2);
+        graphics.FillEllipse(fill, rect);
+        graphics.DrawEllipse(pen, rect);
+        TextRenderer.DrawText(graphics, label, Font, Rectangle.Round(new RectangleF(center.X + radius + 2, center.Y - 10, 54, 20)), active ? Color.FromArgb(91, 244, 183) : Color.FromArgb(201, 213, 230));
+    }
+
+    private void DrawTriggerBar(Graphics graphics, RectangleF imageBounds, float x, float y, string label, byte value)
+    {
+        var origin = ToPoint(imageBounds, x, y);
+        var width = 70f;
+        var height = 10f;
+        var rect = new RectangleF(origin.X - width / 2, origin.Y, width, height);
+        using var back = new SolidBrush(Color.FromArgb(125, 20, 35, 55));
+        using var fill = new SolidBrush(Color.FromArgb(91, 244, 183));
+        using var pen = new Pen(Color.FromArgb(151, 167, 190));
+        graphics.FillRectangle(back, rect);
+        graphics.FillRectangle(fill, new RectangleF(rect.X, rect.Y, rect.Width * value / 255f, rect.Height));
+        graphics.DrawRectangle(pen, Rectangle.Round(rect));
+        TextRenderer.DrawText(graphics, label, Font, Rectangle.Round(new RectangleF(rect.X, rect.Y - 22, width, 20)), Color.FromArgb(239, 246, 255), TextFormatFlags.HorizontalCenter);
+    }
+
+    private void DrawStickVector(Graphics graphics, RectangleF imageBounds, float x, float y, short stickX, short stickY)
+    {
+        var center = ToPoint(imageBounds, x, y);
+        var dx = stickX / 32768f * 22f;
+        var dy = -stickY / 32768f * 22f;
+        using var pen = new Pen(Color.FromArgb(91, 244, 183), 3f);
+        using var fill = new SolidBrush(Color.FromArgb(91, 244, 183));
+        graphics.DrawLine(pen, center, new PointF(center.X + dx, center.Y + dy));
+        graphics.FillEllipse(fill, center.X + dx - 4, center.Y + dy - 4, 8, 8);
+    }
+
+    private static PointF ToPoint(RectangleF imageBounds, float x, float y)
+    {
+        return new PointF(imageBounds.Left + imageBounds.Width * x, imageBounds.Top + imageBounds.Height * y);
+    }
+
+    private static RectangleF FitImage(Image image, Rectangle bounds)
+    {
+        var scale = Math.Min(bounds.Width / (float)image.Width, bounds.Height / (float)image.Height);
+        var width = image.Width * scale;
+        var height = image.Height * scale;
+        return new RectangleF(bounds.Left + (bounds.Width - width) / 2f, bounds.Top + (bounds.Height - height) / 2f, width, height);
+    }
 }
 
 internal static class GraphicsExtensions

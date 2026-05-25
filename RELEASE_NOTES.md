@@ -1,39 +1,27 @@
-# Steam Controller Bridge v0.7.1
+# Steam Controller Bridge v0.8.0
 
-Initial public MVP for testing the 2026 Steam Controller outside Steam.
+Public test build focused on profile quality-of-life, input testing, startup behavior, haptic feedback, and a cleaner Motion page.
 
 ## Highlights
 
-- Presents the Steam Controller as a virtual Xbox 360 controller for XInput games.
-- Supports wired and Steam Controller Puck HID interfaces.
+- Presents the 2026 Steam Controller as a virtual Xbox 360 controller for XInput games.
 - Supports Valve `0x1302`, `0x1303`, and `0x1304` Steam Controller HID product IDs.
-- Handles known state report IDs `0x42` and `0x45`.
-- Disables lizard mode while enabled and restores it on shutdown.
-- Includes full button remapping for standard gamepad buttons and back paddles.
-- Includes keyboard key mapping for controller buttons, triggers, back paddles, and pad clicks.
-- Includes per-button turbo toggles for rapid-fire style presses.
-- Includes remap presets for Default Xbox, Nintendo swap, FPS gyro mouse, FPS gyro right stick, Desktop Mouse, and Old School FPS.
-- Includes saveable profiles with import/export support for sharing layouts.
-- Includes a redesigned tabbed Advanced UI for presets, button remaps, motion, and logs.
-- Includes a centered logo header and icon-only sidebar navigation.
-- Includes L4, L5, R4, and R5 as gyro activation options.
-- Includes a mappable gyro aim toggle button for temporarily disabling gyro aim.
-- Includes gyro stick speed and deadzone tuning controls.
-- Includes a universal turbo speed slider and trigger turbo toggles.
-- Includes optional trackpad-as-mouse mode.
-- Includes simple gyro mode with mouse or virtual right-stick output.
-- Includes left-stick WASD and right-stick mouse modes for keyboard-and-mouse-only PC games.
-- Includes optional rumble passthrough and a rumble toggle.
-- Includes Start with Windows and automatic Steam handoff/reconnect behavior.
-- Includes diagnostic logging.
+- Includes full button remapping, keyboard mapping, turbo, presets, and saveable profiles.
+- Includes mouse/gyro tools, Old School FPS mode, and trackpad-as-mouse mode.
+- Includes an Input Test page with front/back controller views and live physical input indicators.
+- Includes optional haptic power chimes when the bridge turns on or off.
+- Includes Start with Windows, Start minimized to tray, and automatic Steam handoff behavior.
 
-## Changes in 0.7.1
+## Changes in 0.8.0
 
-- Replaced the text header with the centered Steam Controller Bridge logo.
-- Switched sidebar navigation to icon-only buttons with active page titles in the main panel.
-- Added the new transparent active/inactive navigation icon set.
-- Aligned the controller connect icon with the navigation column.
-- Removed the visible rectangular hover highlight from sidebar navigation.
+- Added a Start minimized to tray option for quieter background launches.
+- Added an Input Test page with front/back controller views and live physical input values.
+- Added startup profile selection.
+- Added profile duplicate and reset-default actions.
+- Added overwrite confirmation and unsaved-change status for profiles.
+- Added optional haptic power chimes for bridge activation and deactivation.
+- Moved gyro aim enable/activation controls into the Motion page.
+- Restored larger sidebar navigation icon sizing.
 
 ## Requirements
 
@@ -47,7 +35,7 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 2. Install Steam Controller Bridge or extract the portable ZIP.
 3. Close Steam.
 4. Connect the controller.
-5. Open Steam Controller Bridge and click `On`.
+5. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
 
 ## Known Limitations
 
@@ -56,9 +44,9 @@ Initial public MVP for testing the 2026 Steam Controller outside Steam.
 - Trackpad-as-stick is not implemented yet.
 - HidHide duplicate-device handling is not integrated yet.
 - Remapping is currently global rather than per-game.
-- Rumble is best-effort and may need more hardware tuning.
+- Rumble and haptic chimes are best-effort and may need more hardware tuning.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.7.1.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.7.1.zip`
+- `SteamControllerBridgeSetup-0.8.0.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.8.0.zip`

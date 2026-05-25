@@ -17,6 +17,8 @@ internal static class SteamControllerReports
     public const byte StateReportId = 0x42;
     public const byte StateBleReportId = 0x45;
     public const byte HapticRumbleReportId = 0x80;
+    public const byte HapticStopToneReportId = 0x81;
+    public const byte HapticPlayToneReportId = 0x83;
     public const byte FeatureCommandReportId = 0x01;
     public const byte CommandClearDigitalMappings = 0x81;
     public const byte CommandSetDefaultMappings = 0x85;

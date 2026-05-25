@@ -42,11 +42,18 @@ internal readonly ref struct SteamControllerInput
     public bool RightTriggerActive => RightTrigger > 32;
     public byte LeftTrigger => TriggerToByte(ReadInt16(6));
     public byte RightTrigger => TriggerToByte(ReadInt16(8));
+    public short LeftStickX => ReadInt16(10);
+    public short LeftStickY => ReadInt16(12);
+    public short RightStickX => ReadInt16(14);
+    public short RightStickY => ReadInt16(16);
     public short LeftPadX => ReadInt16(18);
     public short LeftPadY => ReadInt16(20);
     public short RightPadX => ReadInt16(24);
     public short RightPadY => ReadInt16(26);
     public bool HasGyro => _report.Length >= 46;
+    public short AccelX => HasGyro ? ReadInt16(34) : (short)0;
+    public short AccelY => HasGyro ? ReadInt16(36) : (short)0;
+    public short AccelZ => HasGyro ? ReadInt16(38) : (short)0;
     public short GyroX => HasGyro ? ReadInt16(40) : (short)0;
     public short GyroY => HasGyro ? ReadInt16(42) : (short)0;
     public short GyroZ => HasGyro ? ReadInt16(44) : (short)0;

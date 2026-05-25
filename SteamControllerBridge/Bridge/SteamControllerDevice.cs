@@ -132,6 +132,28 @@ internal sealed class SteamControllerDevice : IDisposable
         return _device.SendOutputReport(report);
     }
 
+    public bool PlayHapticTone(byte channel, ushort frequency, byte velocity = 120)
+    {
+        Span<byte> report = stackalloc byte[10];
+        report.Clear();
+        report[0] = SteamControllerReports.HapticPlayToneReportId;
+        report[1] = channel;
+        report[2] = velocity;
+        WriteUInt16(report, 3, frequency);
+        report[5] = 0xFF;
+        report[6] = 0x18;
+        return _device.SendOutputReport(report);
+    }
+
+    public bool StopHapticTone(byte channel)
+    {
+        Span<byte> report = stackalloc byte[10];
+        report.Clear();
+        report[0] = SteamControllerReports.HapticStopToneReportId;
+        report[1] = channel;
+        return _device.SendOutputReport(report);
+    }
+
     private async Task HeartbeatLoop()
     {
         while (!_heartbeatCts.IsCancellationRequested)

@@ -42,9 +42,12 @@ internal sealed class BridgeOptions
     public bool LeftTriggerTurbo { get; set; }
     public bool RightTriggerTurbo { get; set; }
     public bool RumbleEnabled { get; set; } = true;
+    public bool PowerHapticChimeEnabled { get; set; } = true;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
+    public bool StartMinimizedToTray { get; set; }
     public bool AutoDisableForSteam { get; set; } = true;
+    public string StartupProfileName { get; set; } = string.Empty;
     public Dictionary<string, int> KeyboardKeys { get; set; } = new();
 
     public void Normalize()
@@ -69,6 +72,7 @@ internal sealed class BridgeOptions
         MapR4 ??= new(ToGamepadButton(R4));
         MapR5 ??= new(ToGamepadButton(R5));
         KeyboardKeys ??= new Dictionary<string, int>();
+        StartupProfileName ??= string.Empty;
         GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
         GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
         RightStickMouseSensitivity = Math.Clamp(RightStickMouseSensitivity, 1, 80);

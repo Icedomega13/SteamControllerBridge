@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+## 0.8.0
+
+- Added a Start minimized to tray option for quieter background launches.
+- Added an Input Test prototype page with front/back controller views and live physical input values.
+- Added profile polish: startup profile selection, duplicate, reset default, overwrite confirmation, and unsaved-change status.
+- Added optional haptic power chimes for bridge activation and deactivation.
+- Moved gyro aim enable/activation controls into the Motion page.
+- Restored larger sidebar navigation icon sizing.
+
 ## 0.7.1
 
 - Replaced the text header with the centered Steam Controller Bridge logo.

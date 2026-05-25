@@ -37,8 +37,8 @@ internal static class BridgeProfileStore
 
     public static void Save(string profileName, BridgeOptions options)
     {
-        options.Normalize();
-        File.WriteAllText(GetProfilePath(profileName), JsonSerializer.Serialize(options, JsonOptions));
+        var profile = ToProfileOptions(options);
+        File.WriteAllText(GetProfilePath(profileName), JsonSerializer.Serialize(profile, JsonOptions));
     }
 
     public static string Import(string sourcePath)
@@ -78,10 +78,32 @@ internal static class BridgeProfileStore
         return string.IsNullOrWhiteSpace(cleaned) ? "Profile" : cleaned;
     }
 
+    public static bool Exists(string profileName)
+    {
+        return File.Exists(GetProfilePath(profileName));
+    }
+
+    public static string GetProfileSignature(BridgeOptions options)
+    {
+        return JsonSerializer.Serialize(ToProfileOptions(options), JsonOptions);
+    }
+
     private static BridgeOptions LoadFromPath(string path)
     {
         var options = JsonSerializer.Deserialize<BridgeOptions>(File.ReadAllText(path)) ?? new BridgeOptions();
         options.Normalize();
         return options;
+    }
+
+    private static BridgeOptions ToProfileOptions(BridgeOptions options)
+    {
+        options.Normalize();
+        var profile = JsonSerializer.Deserialize<BridgeOptions>(JsonSerializer.Serialize(options, JsonOptions)) ?? new BridgeOptions();
+        profile.StartWithWindows = false;
+        profile.StartMinimizedToTray = false;
+        profile.AutoDisableForSteam = true;
+        profile.StartupProfileName = string.Empty;
+        profile.Normalize();
+        return profile;
     }
 }
