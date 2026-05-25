@@ -23,6 +23,8 @@ internal sealed class MainForm : Form
     private readonly Panel _statusDot = new();
     private readonly PictureBox _controllerPowerImage = new();
     private readonly PictureBox _logoImage = new();
+    private readonly TableLayoutPanel _mainOuter = new();
+    private readonly TableLayoutPanel _mainContent = new();
     private readonly Label _pageTitleLabel = new();
     private readonly ToolTip _toolTip = new();
     private readonly Dictionary<string, Button> _navButtons = new();
@@ -41,6 +43,14 @@ internal sealed class MainForm : Form
     private readonly Button _testBackButton = new();
     private readonly Label _testContextLabel = new();
     private readonly Dictionary<string, Label> _testValueLabels = new();
+    private readonly TrackBar _rumbleIntensitySlider = new();
+    private readonly Label _rumbleIntensityValue = new();
+    private readonly Button _testRumbleButton = new();
+    private readonly Button _testPowerChimeButton = new();
+    private readonly TextBox _midiHapticFileBox = new();
+    private readonly Button _browseMidiHapticButton = new();
+    private readonly Button _playMidiHapticButton = new();
+    private readonly Button _stopMidiHapticButton = new();
     private readonly ComboBox _profileCombo = new();
     private readonly ComboBox _startupProfileCombo = new();
     private readonly TextBox _profileNameBox = new();
@@ -53,6 +63,13 @@ internal sealed class MainForm : Form
     private readonly Button _duplicateProfileButton = new();
     private readonly Button _resetDefaultButton = new();
     private readonly ComboBox _trackpadSourceCombo = new();
+    private readonly CheckBox _trackpadStickCheck = new();
+    private readonly ComboBox _trackpadStickSourceCombo = new();
+    private readonly ComboBox _trackpadStickOutputCombo = new();
+    private readonly TrackBar _trackpadStickSensitivitySlider = new();
+    private readonly Label _trackpadStickSensitivityValue = new();
+    private readonly NumericUpDown _trackpadStickDeadZoneInput = new();
+    private readonly CheckBox _invertTrackpadStickYCheck = new();
     private readonly ComboBox _gyroActivationCombo = new();
     private readonly ComboBox _gyroToggleCombo = new();
     private readonly ComboBox _gyroOutputCombo = new();
@@ -96,8 +113,8 @@ internal sealed class MainForm : Form
     {
         Text = "Steam Controller Bridge";
         StartPosition = FormStartPosition.CenterScreen;
-        MinimumSize = new Size(1120, 720);
-        Size = new Size(1240, 780);
+        MinimumSize = new Size(1280, 820);
+        Size = new Size(1460, 860);
         Font = new Font("Segoe UI", 9F);
         KeyPreview = true;
         _appIcon = LoadAppIcon();
@@ -166,16 +183,26 @@ internal sealed class MainForm : Form
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         var sidebar = BuildSidebar();
-        var main = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            Padding = new Padding(28, 26, 28, 24),
-            RowCount = 3,
-            ColumnCount = 1
-        };
-        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        main.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        main.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        _mainOuter.Dock = DockStyle.Fill;
+        _mainOuter.Padding = new Padding(28, 26, 28, 24);
+        _mainOuter.RowCount = 1;
+        _mainOuter.ColumnCount = 3;
+        _mainOuter.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _mainOuter.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, GetMainContentWidth()));
+        _mainOuter.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _mainOuter.Resize += (_, _) => UpdateMainContentWidth();
+
+        _mainContent.Dock = DockStyle.Fill;
+        _mainContent.RowCount = 4;
+        _mainContent.ColumnCount = 1;
+        _mainContent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _mainContent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _mainContent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        _mainContent.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        var main = _mainContent;
+        main.Padding = new Padding(0);
+        main.Margin = new Padding(0);
 
         var header = new TableLayoutPanel
         {
@@ -264,9 +291,26 @@ internal sealed class MainForm : Form
         main.Controls.Add(titleSpacer, 0, 2);
         main.Controls.Add(_advancedPanel, 0, 3);
 
+        _mainOuter.Controls.Add(main, 1, 0);
         root.Controls.Add(sidebar, 0, 0);
-        root.Controls.Add(main, 1, 0);
+        root.Controls.Add(_mainOuter, 1, 0);
         Controls.Add(root);
+    }
+
+    private int GetMainContentWidth()
+    {
+        var available = Math.Max(900, ClientSize.Width - 230 - 56);
+        return Math.Clamp(available, 960, 1472);
+    }
+
+    private void UpdateMainContentWidth()
+    {
+        if (_mainOuter.ColumnStyles.Count < 2)
+        {
+            return;
+        }
+
+        _mainOuter.ColumnStyles[1].Width = GetMainContentWidth();
     }
 
     private static string GetPageTitle(int pageIndex)
@@ -461,6 +505,8 @@ internal sealed class MainForm : Form
         _advancedPanel.AutoScroll = false;
 
         ConfigureCombo(_trackpadSourceCombo, Enum.GetValues<TrackpadMouseSource>());
+        ConfigureCombo(_trackpadStickSourceCombo, Enum.GetValues<TrackpadMouseSource>());
+        ConfigureCombo(_trackpadStickOutputCombo, Enum.GetValues<TrackpadStickOutput>());
         ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
         ConfigureCombo(_profileCombo, Array.Empty<string>());
         ConfigureCombo(_startupProfileCombo, Array.Empty<string>());
@@ -605,6 +651,7 @@ internal sealed class MainForm : Form
     private Control BuildInputTestTab()
     {
         var tab = CreateTab("Input Test");
+        tab.AutoScroll = true;
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -666,6 +713,10 @@ internal sealed class MainForm : Form
         AddTestValue(statusPanel, "Gyro", "Gyro", 9);
         AddTestValue(statusPanel, "Accel", "Accel", 10);
         AddTestValue(statusPanel, "Fresh", "Report age", 11);
+        AddTestHeader(statusPanel, "Haptics", 12);
+        AddRumbleIntensityRow(statusPanel, 13);
+        AddHapticTestRow(statusPanel, 14);
+        AddMidiHapticRow(statusPanel, 15);
         layout.Controls.Add(statusPanel, 1, 1);
 
         tab.Controls.Add(layout);
@@ -720,6 +771,129 @@ internal sealed class MainForm : Form
         _testValueLabels[key] = value;
         layout.Controls.Add(label, 0, row);
         layout.Controls.Add(value, 1, row);
+    }
+
+    private void AddRumbleIntensityRow(TableLayoutPanel layout, int row)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var label = new Label
+        {
+            Text = "Rumble intensity",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 8, 12, 4)
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            ColumnCount = 2,
+            Margin = new Padding(0)
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52));
+
+        _rumbleIntensitySlider.Minimum = 0;
+        _rumbleIntensitySlider.Maximum = 200;
+        _rumbleIntensitySlider.TickFrequency = 50;
+        _rumbleIntensitySlider.SmallChange = 5;
+        _rumbleIntensitySlider.LargeChange = 25;
+        _rumbleIntensitySlider.Dock = DockStyle.Fill;
+        _rumbleIntensitySlider.Margin = new Padding(0, 0, 8, 0);
+        _rumbleIntensitySlider.ValueChanged += (_, _) =>
+        {
+            _rumbleIntensityValue.Text = $"{_rumbleIntensitySlider.Value}%";
+            SaveOptionsFromUi();
+        };
+        _rumbleIntensitySlider.DoubleClick += (_, _) => _rumbleIntensitySlider.Value = 100;
+        _toolTip.SetToolTip(_rumbleIntensitySlider, "0% disables haptic rumble, 100% is normal, 200% is boosted. Double-click to reset to 100%.");
+
+        _rumbleIntensityValue.AutoSize = true;
+        _rumbleIntensityValue.Anchor = AnchorStyles.Left;
+        _rumbleIntensityValue.Font = new Font(Font.FontFamily, 9, FontStyle.Bold);
+
+        panel.Controls.Add(_rumbleIntensitySlider, 0, 0);
+        panel.Controls.Add(_rumbleIntensityValue, 1, 0);
+
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+    }
+
+    private void AddHapticTestRow(TableLayoutPanel layout, int row)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var label = new Label
+        {
+            Text = "Test",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 8, 12, 4)
+        };
+
+        var panel = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            Margin = new Padding(0)
+        };
+
+        ConfigureSmallButton(_testRumbleButton, "Rumble");
+        ConfigureSmallButton(_testPowerChimeButton, "Chime");
+        _testRumbleButton.Click += (_, _) => _bridge.TestRumble();
+        _testPowerChimeButton.Click += (_, _) => _bridge.TestPowerChime();
+
+        panel.Controls.Add(_testRumbleButton);
+        panel.Controls.Add(_testPowerChimeButton);
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+    }
+
+    private void AddMidiHapticRow(TableLayoutPanel layout, int row)
+    {
+        layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        var label = new Label
+        {
+            Text = "MIDI chime",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 8, 12, 4)
+        };
+
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            ColumnCount = 4,
+            Margin = new Padding(0)
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
+
+        _midiHapticFileBox.ReadOnly = true;
+        _midiHapticFileBox.Dock = DockStyle.Fill;
+        _midiHapticFileBox.Margin = new Padding(0, 6, 6, 0);
+
+        ConfigureSmallButton(_browseMidiHapticButton, "Load");
+        ConfigureSmallButton(_playMidiHapticButton, "Play");
+        ConfigureSmallButton(_stopMidiHapticButton, "Stop");
+        _browseMidiHapticButton.Width = 66;
+        _playMidiHapticButton.Width = 56;
+        _stopMidiHapticButton.Width = 56;
+        _browseMidiHapticButton.Click += (_, _) => BrowseMidiHapticFile();
+        _playMidiHapticButton.Click += (_, _) => _bridge.PlayMidiHapticFile(_bridge.Options.MidiHapticFilePath);
+        _stopMidiHapticButton.Click += (_, _) => _bridge.StopMidiHaptic();
+
+        panel.Controls.Add(_midiHapticFileBox, 0, 0);
+        panel.Controls.Add(_browseMidiHapticButton, 1, 0);
+        panel.Controls.Add(_playMidiHapticButton, 2, 0);
+        panel.Controls.Add(_stopMidiHapticButton, 3, 0);
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
     }
 
     private void SetInputTestView(bool backView)
@@ -814,7 +988,7 @@ internal sealed class MainForm : Form
         var layout = CreateFormLayout(2);
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        for (var row = 0; row < 12; row++)
+        for (var row = 0; row < 17; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -827,10 +1001,16 @@ internal sealed class MainForm : Form
         AddOptionRow(layout, 5, "Mouse pad", _trackpadSourceCombo);
         AddCheckRow(layout, 6, _trackpadMouseCheck, "Use trackpad as mouse");
         AddCheckRow(layout, 7, _trackpadClickCheck, "Trackpad click is left click");
-        AddCheckRow(layout, 8, _leftStickWasdCheck, "Left stick sends WASD");
-        AddCheckRow(layout, 9, _rightStickMouseCheck, "Right stick controls mouse");
-        AddRightStickSensitivityRow(layout, 10);
-        AddCheckRow(layout, 11, _invertRightStickYCheck, "Invert right-stick vertical mouse");
+        AddCheckRow(layout, 8, _trackpadStickCheck, "Use trackpad as stick");
+        AddOptionRow(layout, 9, "Stick pad", _trackpadStickSourceCombo);
+        AddOptionRow(layout, 10, "Stick output", _trackpadStickOutputCombo);
+        AddTrackpadStickSensitivityRow(layout, 11);
+        AddNumericRow(layout, 12, "Stick deadzone", _trackpadStickDeadZoneInput, 0, 8000);
+        AddCheckRow(layout, 13, _invertTrackpadStickYCheck, "Invert trackpad-stick vertical axis");
+        AddCheckRow(layout, 14, _leftStickWasdCheck, "Left stick sends WASD");
+        AddCheckRow(layout, 15, _rightStickMouseCheck, "Right stick controls mouse");
+        AddRightStickSensitivityRow(layout, 16);
+        AddCheckRow(layout, 17, _invertRightStickYCheck, "Invert right-stick vertical mouse");
         tab.Controls.Add(layout);
         return tab;
     }
@@ -1213,6 +1393,42 @@ internal sealed class MainForm : Form
         layout.Controls.Add(panel, 1, row);
     }
 
+    private void AddTrackpadStickSensitivityRow(TableLayoutPanel layout, int row)
+    {
+        var label = new Label
+        {
+            Text = "Stick sensitivity",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 9, 8, 0)
+        };
+
+        var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 58));
+
+        _trackpadStickSensitivitySlider.Minimum = 25;
+        _trackpadStickSensitivitySlider.Maximum = 200;
+        _trackpadStickSensitivitySlider.TickFrequency = 25;
+        _trackpadStickSensitivitySlider.SmallChange = 5;
+        _trackpadStickSensitivitySlider.LargeChange = 25;
+        _trackpadStickSensitivitySlider.Dock = DockStyle.Fill;
+        _trackpadStickSensitivitySlider.ValueChanged += (_, _) =>
+        {
+            _trackpadStickSensitivityValue.Text = $"{_trackpadStickSensitivitySlider.Value}%";
+            SaveOptionsFromUi();
+        };
+        _trackpadStickSensitivitySlider.DoubleClick += (_, _) => _trackpadStickSensitivitySlider.Value = 100;
+
+        _trackpadStickSensitivityValue.AutoSize = true;
+        _trackpadStickSensitivityValue.Anchor = AnchorStyles.Left;
+
+        panel.Controls.Add(_trackpadStickSensitivitySlider, 0, 0);
+        panel.Controls.Add(_trackpadStickSensitivityValue, 1, 0);
+        layout.Controls.Add(label, 0, row);
+        layout.Controls.Add(panel, 1, row);
+    }
+
     private void AddNumericRow(TableLayoutPanel layout, int row, string labelText, NumericUpDown input, int minimum, int maximum)
     {
         var label = new Label
@@ -1267,6 +1483,12 @@ internal sealed class MainForm : Form
         }
 
         _trackpadSourceCombo.SelectedItem = _bridge.Options.TrackpadMouseSource;
+        _trackpadStickSourceCombo.SelectedItem = _bridge.Options.TrackpadStickSource;
+        _trackpadStickOutputCombo.SelectedItem = _bridge.Options.TrackpadStickOutput;
+        _trackpadStickSensitivitySlider.Value = _bridge.Options.TrackpadStickSensitivity;
+        _trackpadStickSensitivityValue.Text = $"{_bridge.Options.TrackpadStickSensitivity}%";
+        _trackpadStickDeadZoneInput.Value = _bridge.Options.TrackpadStickDeadZone;
+        _invertTrackpadStickYCheck.Checked = _bridge.Options.InvertTrackpadStickY;
         _presetCombo.SelectedItem = RemapPreset.DefaultXbox;
         _gyroOutputCombo.SelectedItem = _bridge.Options.GyroOutputMode;
         _gyroToggleCombo.SelectedItem = _bridge.Options.GyroToggleButton;
@@ -1284,6 +1506,7 @@ internal sealed class MainForm : Form
         _rightTriggerTurboCheck.Checked = _bridge.Options.RightTriggerTurbo;
         _gyroActivationCombo.SelectedItem = _bridge.Options.GyroMouseActivation;
         _trackpadMouseCheck.Checked = _bridge.Options.TrackpadMouseEnabled;
+        _trackpadStickCheck.Checked = _bridge.Options.TrackpadStickEnabled;
         _trackpadClickCheck.Checked = _bridge.Options.TrackpadClickEnabled;
         _bridge.Options.StartWithWindows = StartupManager.IsEnabled();
         _startWithWindowsCheck.Checked = _bridge.Options.StartWithWindows;
@@ -1291,6 +1514,11 @@ internal sealed class MainForm : Form
         _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
+        _rumbleIntensitySlider.Value = _bridge.Options.RumbleIntensityPercent;
+        _rumbleIntensityValue.Text = $"{_bridge.Options.RumbleIntensityPercent}%";
+        _midiHapticFileBox.Text = string.IsNullOrWhiteSpace(_bridge.Options.MidiHapticFilePath)
+            ? string.Empty
+            : Path.GetFileName(_bridge.Options.MidiHapticFilePath);
         _powerHapticChimeCheck.Checked = _bridge.Options.PowerHapticChimeEnabled;
         RefreshProfiles();
         _updatingOptions = false;
@@ -1312,6 +1540,11 @@ internal sealed class MainForm : Form
         }
 
         _bridge.Options.TrackpadMouseSource = (TrackpadMouseSource)(_trackpadSourceCombo.SelectedItem ?? _bridge.Options.TrackpadMouseSource);
+        _bridge.Options.TrackpadStickSource = (TrackpadMouseSource)(_trackpadStickSourceCombo.SelectedItem ?? _bridge.Options.TrackpadStickSource);
+        _bridge.Options.TrackpadStickOutput = (TrackpadStickOutput)(_trackpadStickOutputCombo.SelectedItem ?? _bridge.Options.TrackpadStickOutput);
+        _bridge.Options.TrackpadStickSensitivity = _trackpadStickSensitivitySlider.Value;
+        _bridge.Options.TrackpadStickDeadZone = (int)_trackpadStickDeadZoneInput.Value;
+        _bridge.Options.InvertTrackpadStickY = _invertTrackpadStickYCheck.Checked;
         _bridge.Options.GyroOutputMode = (GyroOutputMode)(_gyroOutputCombo.SelectedItem ?? _bridge.Options.GyroOutputMode);
         _bridge.Options.GyroToggleButton = (GyroToggleButton)(_gyroToggleCombo.SelectedItem ?? _bridge.Options.GyroToggleButton);
         _bridge.Options.GyroStickSensitivity = _gyroStickSensitivitySlider.Value;
@@ -1325,6 +1558,7 @@ internal sealed class MainForm : Form
         _bridge.Options.RightTriggerTurbo = _rightTriggerTurboCheck.Checked;
         _bridge.Options.GyroMouseActivation = (GyroMouseActivation)(_gyroActivationCombo.SelectedItem ?? _bridge.Options.GyroMouseActivation);
         _bridge.Options.TrackpadMouseEnabled = _trackpadMouseCheck.Checked;
+        _bridge.Options.TrackpadStickEnabled = _trackpadStickCheck.Checked;
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;
         _bridge.Options.StartWithWindows = _startWithWindowsCheck.Checked;
         _bridge.Options.StartMinimizedToTray = _startMinimizedToTrayCheck.Checked;
@@ -1332,10 +1566,29 @@ internal sealed class MainForm : Form
         _bridge.Options.StartupProfileName = SelectedStartupProfileName();
         _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
+        _bridge.Options.RumbleIntensityPercent = _rumbleIntensitySlider.Value;
         _bridge.Options.PowerHapticChimeEnabled = _powerHapticChimeCheck.Checked;
         _bridge.SaveOptions();
         SyncTrayOptions();
         UpdateProfileDirtyState();
+    }
+
+    private void BrowseMidiHapticFile()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Choose MIDI haptic chime",
+            Filter = "MIDI files (*.mid;*.midi)|*.mid;*.midi|All files (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        _bridge.Options.MidiHapticFilePath = dialog.FileName;
+        _midiHapticFileBox.Text = Path.GetFileName(dialog.FileName);
+        _bridge.SaveOptions();
     }
 
     private void ApplySelectedPreset()

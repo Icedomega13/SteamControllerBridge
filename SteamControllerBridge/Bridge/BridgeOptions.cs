@@ -28,6 +28,12 @@ internal sealed class BridgeOptions
     public bool TrackpadMouseEnabled { get; set; }
     public TrackpadMouseSource TrackpadMouseSource { get; set; } = TrackpadMouseSource.Right;
     public bool TrackpadClickEnabled { get; set; } = true;
+    public bool TrackpadStickEnabled { get; set; }
+    public TrackpadMouseSource TrackpadStickSource { get; set; } = TrackpadMouseSource.Left;
+    public TrackpadStickOutput TrackpadStickOutput { get; set; } = TrackpadStickOutput.LeftStick;
+    public int TrackpadStickSensitivity { get; set; } = 100;
+    public int TrackpadStickDeadZone { get; set; } = 800;
+    public bool InvertTrackpadStickY { get; set; }
     public bool GyroMouseEnabled { get; set; }
     public GyroMouseActivation GyroMouseActivation { get; set; } = GyroMouseActivation.LeftTrigger;
     public GyroToggleButton GyroToggleButton { get; set; } = GyroToggleButton.Disabled;
@@ -42,7 +48,9 @@ internal sealed class BridgeOptions
     public bool LeftTriggerTurbo { get; set; }
     public bool RightTriggerTurbo { get; set; }
     public bool RumbleEnabled { get; set; } = true;
+    public int RumbleIntensityPercent { get; set; } = 100;
     public bool PowerHapticChimeEnabled { get; set; } = true;
+    public string MidiHapticFilePath { get; set; } = string.Empty;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
     public bool StartMinimizedToTray { get; set; }
@@ -73,10 +81,14 @@ internal sealed class BridgeOptions
         MapR5 ??= new(ToGamepadButton(R5));
         KeyboardKeys ??= new Dictionary<string, int>();
         StartupProfileName ??= string.Empty;
+        MidiHapticFilePath ??= string.Empty;
+        TrackpadStickSensitivity = Math.Clamp(TrackpadStickSensitivity, 25, 200);
+        TrackpadStickDeadZone = Math.Clamp(TrackpadStickDeadZone, 0, 8000);
         GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
         GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
         RightStickMouseSensitivity = Math.Clamp(RightStickMouseSensitivity, 1, 80);
         TurboIntervalMs = Math.Clamp(TurboIntervalMs, 25, 500);
+        RumbleIntensityPercent = Math.Clamp(RumbleIntensityPercent, 0, 200);
     }
 
     public int GetKeyboardKey(ControllerInput input)
@@ -153,6 +165,7 @@ internal sealed class BridgeOptions
     {
         ResetButtonBindings();
         TrackpadMouseEnabled = false;
+        TrackpadStickEnabled = false;
         GyroMouseEnabled = false;
         GyroOutputMode = GyroOutputMode.Mouse;
         GyroMouseActivation = GyroMouseActivation.LeftTrigger;
@@ -346,6 +359,12 @@ internal enum TrackpadMouseSource
     Right,
     Left,
     Both
+}
+
+internal enum TrackpadStickOutput
+{
+    LeftStick,
+    RightStick
 }
 
 internal enum GyroMouseActivation

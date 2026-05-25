@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.9.0
+
+- Added trackpad-as-stick mode with source pad, virtual stick output, sensitivity, deadzone, and vertical invert controls.
+- Added rumble intensity controls and haptic test actions to the Input Test page.
+- Added a local MIDI haptic chime player for user-provided MIDI files.
+- Improved MIDI haptic playback timing and loudness.
+- Improved wide-window layout with a centered max-width content area and larger default window size.
+
 ## 0.8.0
 
 - Added a Start minimized to tray option for quieter background launches.

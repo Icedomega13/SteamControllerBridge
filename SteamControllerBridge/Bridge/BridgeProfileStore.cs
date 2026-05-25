@@ -103,6 +103,7 @@ internal static class BridgeProfileStore
         profile.StartMinimizedToTray = false;
         profile.AutoDisableForSteam = true;
         profile.StartupProfileName = string.Empty;
+        profile.MidiHapticFilePath = string.Empty;
         profile.Normalize();
         return profile;
     }

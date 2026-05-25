@@ -35,8 +35,8 @@ internal sealed class XboxVirtualController : IDisposable
         _controller.SetButtonsFull(buttons);
         _controller.SetSliderValue(Xbox360Slider.LeftTrigger, BuildTriggerValue(input.LeftTrigger, ControllerInput.LeftTrigger, options.LeftTriggerTurbo, options));
         _controller.SetSliderValue(Xbox360Slider.RightTrigger, BuildTriggerValue(input.RightTrigger, ControllerInput.RightTrigger, options.RightTriggerTurbo, options));
-        _controller.SetAxisValue(Xbox360Axis.LeftThumbX, options.LeftStickWasdEnabled ? (short)0 : ReadInt16(input.Report, 10));
-        _controller.SetAxisValue(Xbox360Axis.LeftThumbY, options.LeftStickWasdEnabled ? (short)0 : ReadInt16(input.Report, 12));
+        var leftX = options.LeftStickWasdEnabled ? (short)0 : ReadInt16(input.Report, 10);
+        var leftY = options.LeftStickWasdEnabled ? (short)0 : ReadInt16(input.Report, 12);
         var rightX = ReadInt16(input.Report, 14);
         var rightY = ReadInt16(input.Report, 16);
         if (options.RightStickMouseEnabled)
@@ -45,10 +45,77 @@ internal sealed class XboxVirtualController : IDisposable
             rightY = 0;
         }
 
+        ApplyTrackpadStick(input, options, ref leftX, ref leftY, ref rightX, ref rightY);
         ApplyGyroRightStick(input, options, gyroAllowed, ref rightX, ref rightY);
+        _controller.SetAxisValue(Xbox360Axis.LeftThumbX, leftX);
+        _controller.SetAxisValue(Xbox360Axis.LeftThumbY, leftY);
         _controller.SetAxisValue(Xbox360Axis.RightThumbX, rightX);
         _controller.SetAxisValue(Xbox360Axis.RightThumbY, rightY);
         _controller.SubmitReport();
+    }
+
+    private static void ApplyTrackpadStick(
+        SteamControllerInput input,
+        BridgeOptions options,
+        ref short leftX,
+        ref short leftY,
+        ref short rightX,
+        ref short rightY)
+    {
+        if (!options.TrackpadStickEnabled ||
+            !TryGetTrackpad(input, options.TrackpadStickSource, out var padX, out var padY))
+        {
+            return;
+        }
+
+        var x = ScaleTrackpadAxis(padX, options);
+        var y = ScaleTrackpadAxis(padY, options);
+        if (options.InvertTrackpadStickY)
+        {
+            y = (short)-y;
+        }
+
+        if (options.TrackpadStickOutput == TrackpadStickOutput.LeftStick)
+        {
+            leftX = x;
+            leftY = y;
+            return;
+        }
+
+        rightX = x;
+        rightY = y;
+    }
+
+    private static bool TryGetTrackpad(SteamControllerInput input, TrackpadMouseSource source, out short x, out short y)
+    {
+        if ((source == TrackpadMouseSource.Left || source == TrackpadMouseSource.Both) && input.LeftPadTouched)
+        {
+            x = input.LeftPadX;
+            y = input.LeftPadY;
+            return true;
+        }
+
+        if ((source == TrackpadMouseSource.Right || source == TrackpadMouseSource.Both) && input.RightPadTouched)
+        {
+            x = input.RightPadX;
+            y = input.RightPadY;
+            return true;
+        }
+
+        x = 0;
+        y = 0;
+        return false;
+    }
+
+    private static short ScaleTrackpadAxis(short value, BridgeOptions options)
+    {
+        if (Math.Abs(value) < options.TrackpadStickDeadZone)
+        {
+            return 0;
+        }
+
+        var scaled = value * (options.TrackpadStickSensitivity / 100.0);
+        return (short)Math.Clamp((int)Math.Round(scaled), short.MinValue, short.MaxValue);
     }
 
     private void ApplyGyroRightStick(SteamControllerInput input, BridgeOptions options, bool gyroAllowed, ref short rightX, ref short rightY)

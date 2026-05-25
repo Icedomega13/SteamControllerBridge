@@ -24,6 +24,7 @@ internal sealed class BridgeService : IDisposable
     private bool _steamBackoffActive;
     private bool _gyroAllowed = true;
     private bool _lastGyroTogglePressed;
+    private CancellationTokenSource? _midiChimeCts;
 
     public event EventHandler<BridgeStatus>? StatusChanged;
     public event EventHandler<string>? LogWritten;
@@ -47,6 +48,104 @@ internal sealed class BridgeService : IDisposable
         {
             StopRumble();
         }
+    }
+
+    public void TestRumble()
+    {
+        Task.Run(() =>
+        {
+            SteamControllerDevice? controller;
+            lock (_gate)
+            {
+                controller = Status.IsEnabled ? _controller : null;
+            }
+
+            if (controller is null)
+            {
+                Log("Test rumble skipped: bridge is not connected.");
+                return;
+            }
+
+            var small = ScaleRumble(120);
+            var large = ScaleRumble(180);
+            if (!Options.RumbleEnabled || small == 0 && large == 0)
+            {
+                Log("Test rumble skipped: rumble is disabled or intensity is 0%.");
+                return;
+            }
+
+            controller.SendRumble(small, large);
+            Thread.Sleep(350);
+            controller.SendRumble(0, 0);
+            Log($"Test rumble played at {Options.RumbleIntensityPercent}% intensity.");
+        });
+    }
+
+    public void TestPowerChime()
+    {
+        Task.Run(() =>
+        {
+            SteamControllerDevice? controller;
+            lock (_gate)
+            {
+                controller = Status.IsEnabled ? _controller : null;
+            }
+
+            if (controller is null)
+            {
+                Log("Test chime skipped: bridge is not connected.");
+                return;
+            }
+
+            PlayToneChime(controller, activate: true);
+            Thread.Sleep(80);
+            PlayToneChime(controller, activate: false);
+            Log("Test haptic chime played.");
+        });
+    }
+
+    public void PlayMidiHapticFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            Log("MIDI haptic skipped: choose a MIDI file first.");
+            return;
+        }
+
+        if (!File.Exists(path))
+        {
+            Log("MIDI haptic skipped: file was not found.");
+            return;
+        }
+
+        CancellationTokenSource cts;
+        lock (_gate)
+        {
+            _midiChimeCts?.Cancel();
+            _midiChimeCts?.Dispose();
+            _midiChimeCts = new CancellationTokenSource();
+            cts = _midiChimeCts;
+        }
+
+        Task.Run(() => PlayMidiHapticFile(path, cts.Token));
+    }
+
+    public void StopMidiHaptic()
+    {
+        CancellationTokenSource? cts;
+        SteamControllerDevice? controller;
+        lock (_gate)
+        {
+            cts = _midiChimeCts;
+            _midiChimeCts = null;
+            controller = _controller;
+        }
+
+        cts?.Cancel();
+        cts?.Dispose();
+        controller?.StopHapticTone(0);
+        controller?.StopHapticTone(1);
+        Log("MIDI haptic stopped.");
     }
 
     public void LoadOptions(BridgeOptions options)
@@ -263,18 +362,78 @@ internal sealed class BridgeService : IDisposable
             return;
         }
 
+        PlayToneChime(_controller, activate);
+    }
+
+    private static void PlayToneChime(SteamControllerDevice controller, bool activate)
+    {
         var notes = activate
             ? new ushort[] { 440, 660 }
             : new ushort[] { 660, 330 };
         foreach (var note in notes)
         {
-            _controller.PlayHapticTone(0, note, 120);
-            _controller.PlayHapticTone(1, note, 120);
+            controller.PlayHapticTone(0, note, 120);
+            controller.PlayHapticTone(1, note, 120);
             Thread.Sleep(55);
         }
 
-        _controller.StopHapticTone(0);
-        _controller.StopHapticTone(1);
+        controller.StopHapticTone(0);
+        controller.StopHapticTone(1);
+    }
+
+    private void PlayMidiHapticFile(string path, CancellationToken token)
+    {
+        SteamControllerDevice? controller;
+        lock (_gate)
+        {
+            controller = Status.IsEnabled ? _controller : null;
+        }
+
+        if (controller is null)
+        {
+            Log("MIDI haptic skipped: bridge is not connected.");
+            return;
+        }
+
+        try
+        {
+            var sequence = MidiHapticSequence.Load(path);
+            if (sequence.Events.Count == 0)
+            {
+                Log("MIDI haptic skipped: no notes found.");
+                return;
+            }
+
+            Log($"Playing MIDI haptic: {Path.GetFileName(path)}");
+            foreach (var ev in sequence.Events)
+            {
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                if (ev.DelayMs > 0)
+                {
+                    Thread.Sleep(Math.Min(ev.DelayMs, 4000));
+                }
+
+                var velocity = (byte)Math.Clamp(210 + (ev.Velocity * 45 / 127), 220, 255);
+                controller.StopHapticTone(0);
+                controller.StopHapticTone(1);
+                Thread.Sleep(2);
+                controller.PlayHapticTone(0, ev.Frequency, velocity);
+                controller.PlayHapticTone(1, ev.Frequency, velocity);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"MIDI haptic failed: {ex.Message}");
+        }
+        finally
+        {
+            controller.StopHapticTone(0);
+            controller.StopHapticTone(1);
+        }
     }
 
     private async Task ReadLoop(CancellationToken token)
@@ -441,7 +600,7 @@ internal sealed class BridgeService : IDisposable
             _rumbleLarge = Options.RumbleEnabled ? e.LargeMotor : (byte)0;
         }
 
-        if (!Options.RumbleEnabled || e.SmallMotor == 0 && e.LargeMotor == 0)
+        if (!Options.RumbleEnabled || Options.RumbleIntensityPercent <= 0 || e.SmallMotor == 0 && e.LargeMotor == 0)
         {
             StopRumble();
         }
@@ -449,7 +608,7 @@ internal sealed class BridgeService : IDisposable
 
     private void MaybeSendRumble()
     {
-        if (!Options.RumbleEnabled)
+        if (!Options.RumbleEnabled || Options.RumbleIntensityPercent <= 0)
         {
             StopRumble();
             return;
@@ -473,10 +632,29 @@ internal sealed class BridgeService : IDisposable
             return;
         }
 
-        _controller?.SendRumble(small, large);
-        _lastSentRumbleSmall = small;
-        _lastSentRumbleLarge = large;
+        var scaledSmall = ScaleRumble(small);
+        var scaledLarge = ScaleRumble(large);
+        if (scaledSmall == 0 && scaledLarge == 0)
+        {
+            StopRumble();
+            return;
+        }
+
+        _controller?.SendRumble(scaledSmall, scaledLarge);
+        _lastSentRumbleSmall = scaledSmall;
+        _lastSentRumbleLarge = scaledLarge;
         _nextRumbleAt = DateTime.UtcNow.AddMilliseconds(40);
+    }
+
+    private byte ScaleRumble(byte value)
+    {
+        if (!Options.RumbleEnabled || Options.RumbleIntensityPercent <= 0 || value == 0)
+        {
+            return 0;
+        }
+
+        var scaled = (int)Math.Round(value * (Options.RumbleIntensityPercent / 100.0));
+        return (byte)Math.Clamp(scaled, 0, byte.MaxValue);
     }
 
     private void StopRumble()
@@ -515,5 +693,6 @@ internal sealed class BridgeService : IDisposable
         Stop();
         _keyboard.Reset();
         _fpsInput.Reset();
+        StopMidiHaptic();
     }
 }

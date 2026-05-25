@@ -16,7 +16,7 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.8.0.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.9.0.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
 6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
@@ -44,9 +44,12 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
 - Saveable profiles with import/export support for sharing layouts
 - Centered logo header with icon-only sidebar navigation
 - Optional trackpad-as-mouse mode
+- Optional trackpad-as-stick mode with left/right stick output, sensitivity, deadzone, and vertical invert controls
 - Optional gyro output to mouse or the virtual right stick
 - Optional left-stick WASD and right-stick mouse mode for older keyboard-and-mouse-only games
 - Optional haptic power chime when the bridge turns on or off
+- Rumble intensity slider with test rumble and test chime controls
+- Local MIDI haptic chime player for user-provided MIDI files
 - Right-stick mouse speed and vertical invert controls
 - Keyboard key mapping for controller buttons, triggers, pad clicks, and back paddles
 - Universal turbo speed control and trigger turbo toggles
@@ -105,7 +108,6 @@ This is useful when Windows sees the controller but the bridge cannot find the l
 ## Limitations
 
 - No native Switch/DSU motion output yet
-- No trackpad-as-stick mapping yet
 - No HidHide integration yet
 - Virtual output currently depends on ViGEmBus
 - Steam Controller haptics are implemented as best-effort rumble and may need tuning on real hardware
