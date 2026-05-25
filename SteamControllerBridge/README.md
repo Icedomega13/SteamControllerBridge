@@ -2,7 +2,7 @@
 
 Steam Controller Bridge is a tiny Windows tray app that makes the 2026 Steam Controller appear as a virtual Xbox 360 controller.
 
-The goal is intentionally simple: connect the controller, turn the bridge on, and launch a game. No Steam shortcut setup, no giant dashboard.
+The goal is to replicate the most useful parts of Steam Input without needing Steam running: connect the controller, turn the bridge on, and launch a game. No Steam shortcut setup, no giant dashboard.
 
 ![Steam Controller Bridge main window](docs/images/main-window.jpg)
 
