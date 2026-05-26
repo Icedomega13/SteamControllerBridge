@@ -48,6 +48,7 @@ internal sealed class MainForm : Form
     private readonly Button _testRumbleButton = new();
     private readonly Button _testPowerChimeButton = new();
     private readonly TextBox _midiHapticFileBox = new();
+    private readonly ComboBox _midiHapticModeCombo = new();
     private readonly Button _browseMidiHapticButton = new();
     private readonly Button _playMidiHapticButton = new();
     private readonly Button _stopMidiHapticButton = new();
@@ -93,6 +94,7 @@ internal sealed class MainForm : Form
     private readonly CheckBox _startWithWindowsCheck = new();
     private readonly CheckBox _startMinimizedToTrayCheck = new();
     private readonly CheckBox _autoDisableForSteamCheck = new();
+    private readonly CheckBox _dsuMotionServerCheck = new();
     private readonly Button _openLogButton = new();
     private readonly Button _copyDiagnosticsButton = new();
     private readonly System.Windows.Forms.Timer _lifecycleTimer = new();
@@ -487,14 +489,22 @@ internal sealed class MainForm : Form
 
         _autoDisableForSteamCheck.Text = "Back off when Steam opens";
         _autoDisableForSteamCheck.AutoSize = true;
-        _autoDisableForSteamCheck.Margin = new Padding(0, 0, 0, 0);
+        _autoDisableForSteamCheck.Margin = new Padding(0, 0, 18, 0);
         _autoDisableForSteamCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        _toolTip.SetToolTip(_autoDisableForSteamCheck, "Automatically pause the bridge if Steam starts.");
+
+        _dsuMotionServerCheck.Text = "DSU motion";
+        _dsuMotionServerCheck.AutoSize = true;
+        _dsuMotionServerCheck.Margin = new Padding(0, 0, 0, 0);
+        _dsuMotionServerCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        _toolTip.SetToolTip(_dsuMotionServerCheck, "Expose gyro and accelerometer motion to DSU/Cemuhook-compatible emulators on 127.0.0.1:26760.");
 
         _quickOptionsContent.Controls.Add(_rumbleCheck);
         _quickOptionsContent.Controls.Add(_powerHapticChimeCheck);
         _quickOptionsContent.Controls.Add(_startWithWindowsCheck);
         _quickOptionsContent.Controls.Add(_startMinimizedToTrayCheck);
         _quickOptionsContent.Controls.Add(_autoDisableForSteamCheck);
+        _quickOptionsContent.Controls.Add(_dsuMotionServerCheck);
         _quickOptionsPanel.Controls.Add(_quickOptionsContent);
     }
 
@@ -513,6 +523,7 @@ internal sealed class MainForm : Form
         ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
         ConfigureCombo(_gyroToggleCombo, Enum.GetValues<GyroToggleButton>());
+        ConfigureCombo(_midiHapticModeCombo, Enum.GetValues<MidiHapticPlaybackMode>());
 
         _contentHost.Dock = DockStyle.Fill;
         _contentHost.Margin = new Padding(0);
@@ -866,10 +877,11 @@ internal sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             AutoSize = true,
-            ColumnCount = 4,
+            ColumnCount = 5,
             Margin = new Padding(0)
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 62));
@@ -877,6 +889,9 @@ internal sealed class MainForm : Form
         _midiHapticFileBox.ReadOnly = true;
         _midiHapticFileBox.Dock = DockStyle.Fill;
         _midiHapticFileBox.Margin = new Padding(0, 6, 6, 0);
+        _midiHapticModeCombo.Margin = new Padding(0, 6, 6, 0);
+        _midiHapticModeCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
+        _toolTip.SetToolTip(_midiHapticModeCombo, "Simple mirrors one note to both pads. Full routes MIDI channels across more haptic outputs and adds bass rumble.");
 
         ConfigureSmallButton(_browseMidiHapticButton, "Load");
         ConfigureSmallButton(_playMidiHapticButton, "Play");
@@ -889,9 +904,10 @@ internal sealed class MainForm : Form
         _stopMidiHapticButton.Click += (_, _) => _bridge.StopMidiHaptic();
 
         panel.Controls.Add(_midiHapticFileBox, 0, 0);
-        panel.Controls.Add(_browseMidiHapticButton, 1, 0);
-        panel.Controls.Add(_playMidiHapticButton, 2, 0);
-        panel.Controls.Add(_stopMidiHapticButton, 3, 0);
+        panel.Controls.Add(_midiHapticModeCombo, 1, 0);
+        panel.Controls.Add(_browseMidiHapticButton, 2, 0);
+        panel.Controls.Add(_playMidiHapticButton, 3, 0);
+        panel.Controls.Add(_stopMidiHapticButton, 4, 0);
         layout.Controls.Add(label, 0, row);
         layout.Controls.Add(panel, 1, row);
     }
@@ -1512,6 +1528,7 @@ internal sealed class MainForm : Form
         _startWithWindowsCheck.Checked = _bridge.Options.StartWithWindows;
         _startMinimizedToTrayCheck.Checked = _bridge.Options.StartMinimizedToTray;
         _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
+        _dsuMotionServerCheck.Checked = _bridge.Options.DsuMotionServerEnabled;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
         _rumbleIntensitySlider.Value = _bridge.Options.RumbleIntensityPercent;
@@ -1519,6 +1536,7 @@ internal sealed class MainForm : Form
         _midiHapticFileBox.Text = string.IsNullOrWhiteSpace(_bridge.Options.MidiHapticFilePath)
             ? string.Empty
             : Path.GetFileName(_bridge.Options.MidiHapticFilePath);
+        _midiHapticModeCombo.SelectedItem = _bridge.Options.MidiHapticPlaybackMode;
         _powerHapticChimeCheck.Checked = _bridge.Options.PowerHapticChimeEnabled;
         RefreshProfiles();
         _updatingOptions = false;
@@ -1563,11 +1581,13 @@ internal sealed class MainForm : Form
         _bridge.Options.StartWithWindows = _startWithWindowsCheck.Checked;
         _bridge.Options.StartMinimizedToTray = _startMinimizedToTrayCheck.Checked;
         _bridge.Options.AutoDisableForSteam = _autoDisableForSteamCheck.Checked;
+        _bridge.Options.DsuMotionServerEnabled = _dsuMotionServerCheck.Checked;
         _bridge.Options.StartupProfileName = SelectedStartupProfileName();
         _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
         _bridge.Options.RumbleIntensityPercent = _rumbleIntensitySlider.Value;
         _bridge.Options.PowerHapticChimeEnabled = _powerHapticChimeCheck.Checked;
+        _bridge.Options.MidiHapticPlaybackMode = (MidiHapticPlaybackMode)(_midiHapticModeCombo.SelectedItem ?? _bridge.Options.MidiHapticPlaybackMode);
         _bridge.SaveOptions();
         SyncTrayOptions();
         UpdateProfileDirtyState();

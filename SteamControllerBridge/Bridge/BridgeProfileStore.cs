@@ -102,8 +102,10 @@ internal static class BridgeProfileStore
         profile.StartWithWindows = false;
         profile.StartMinimizedToTray = false;
         profile.AutoDisableForSteam = true;
+        profile.DsuMotionServerEnabled = false;
         profile.StartupProfileName = string.Empty;
         profile.MidiHapticFilePath = string.Empty;
+        profile.MidiHapticPlaybackMode = MidiHapticPlaybackMode.Simple;
         profile.Normalize();
         return profile;
     }

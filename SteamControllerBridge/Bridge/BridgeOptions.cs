@@ -51,10 +51,12 @@ internal sealed class BridgeOptions
     public int RumbleIntensityPercent { get; set; } = 100;
     public bool PowerHapticChimeEnabled { get; set; } = true;
     public string MidiHapticFilePath { get; set; } = string.Empty;
+    public MidiHapticPlaybackMode MidiHapticPlaybackMode { get; set; } = MidiHapticPlaybackMode.Simple;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
     public bool StartMinimizedToTray { get; set; }
     public bool AutoDisableForSteam { get; set; } = true;
+    public bool DsuMotionServerEnabled { get; set; }
     public string StartupProfileName { get; set; } = string.Empty;
     public Dictionary<string, int> KeyboardKeys { get; set; } = new();
 
@@ -412,4 +414,12 @@ internal enum GyroOutputMode
 {
     Mouse,
     RightStick
+}
+
+internal enum MidiHapticPlaybackMode
+{
+    Simple,
+    Full,
+    PadsOnly,
+    RumbleOnly
 }

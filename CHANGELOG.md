@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.10.0
+
+- Added an experimental DSU/Cemuhook motion server toggle for emulator-native gyro/accelerometer output on `127.0.0.1:26760`.
+- Added DSU setup guidance to the app log when the motion server starts.
+- Added a controller shortcut to turn Bridge off by holding View + Menu for 5 seconds, with a warning chime after 3 seconds.
+- Added expanded MIDI haptic playback modes for fuller pad/rumble output.
+- Fixed release packaging so image assets are published inside the external `Assets` folder expected by the app.
+- Replaced inactive navigation artwork with the latest matched icon set.
+- Added the settings navigation asset for the upcoming settings page.
+
 ## 0.9.0
 
 - Added trackpad-as-stick mode with source pad, virtual stick output, sensitivity, deadzone, and vertical invert controls.

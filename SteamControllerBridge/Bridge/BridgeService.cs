@@ -13,6 +13,7 @@ internal sealed class BridgeService : IDisposable
     private readonly GyroMouseEmulator _gyroMouse = new();
     private readonly KeyboardEmulator _keyboard = new();
     private readonly FpsInputEmulator _fpsInput = new();
+    private readonly DsuMotionServer _dsuMotionServer;
     private readonly object _rumbleGate = new();
     private byte _rumbleSmall;
     private byte _rumbleLarge;
@@ -24,6 +25,9 @@ internal sealed class BridgeService : IDisposable
     private bool _steamBackoffActive;
     private bool _gyroAllowed = true;
     private bool _lastGyroTogglePressed;
+    private DateTime? _emergencyShortcutStartedAt;
+    private bool _emergencyShortcutWarned;
+    private bool _emergencyShortcutTriggered;
     private CancellationTokenSource? _midiChimeCts;
 
     public event EventHandler<BridgeStatus>? StatusChanged;
@@ -35,9 +39,11 @@ internal sealed class BridgeService : IDisposable
 
     public BridgeService()
     {
+        _dsuMotionServer = new DsuMotionServer(Log);
         _keyboard.LogWritten += (_, message) => Log(message);
         _fpsInput.LogWritten += (_, message) => Log(message);
         LoadStartupProfileIfConfigured();
+        SyncDsuMotionServer();
     }
 
     public void SaveOptions()
@@ -48,6 +54,8 @@ internal sealed class BridgeService : IDisposable
         {
             StopRumble();
         }
+
+        SyncDsuMotionServer();
     }
 
     public void TestRumble()
@@ -143,8 +151,8 @@ internal sealed class BridgeService : IDisposable
 
         cts?.Cancel();
         cts?.Dispose();
-        controller?.StopHapticTone(0);
-        controller?.StopHapticTone(1);
+        StopAllHapticTones(controller);
+        controller?.SendRumble(0, 0);
         Log("MIDI haptic stopped.");
     }
 
@@ -185,6 +193,7 @@ internal sealed class BridgeService : IDisposable
             options.StartWithWindows,
             options.StartMinimizedToTray,
             options.AutoDisableForSteam,
+            options.DsuMotionServerEnabled,
             options.StartupProfileName);
     }
 
@@ -193,6 +202,7 @@ internal sealed class BridgeService : IDisposable
         options.StartWithWindows = appSettings.StartWithWindows;
         options.StartMinimizedToTray = appSettings.StartMinimizedToTray;
         options.AutoDisableForSteam = appSettings.AutoDisableForSteam;
+        options.DsuMotionServerEnabled = appSettings.DsuMotionServerEnabled;
         options.StartupProfileName = appSettings.StartupProfileName;
     }
 
@@ -200,6 +210,7 @@ internal sealed class BridgeService : IDisposable
         bool StartWithWindows,
         bool StartMinimizedToTray,
         bool AutoDisableForSteam,
+        bool DsuMotionServerEnabled,
         string StartupProfileName);
 
     public void TickLifecycle()
@@ -256,17 +267,17 @@ internal sealed class BridgeService : IDisposable
 
             try
             {
-                if (SystemDiagnostics.IsSteamRunning())
-                {
-                    SetStatus(BridgeStatus.Failed("Close Steam and try again"));
-                    Log("Startup blocked: Steam is running and may claim the controller.");
-                    return;
-                }
-
                 if (!SystemDiagnostics.IsVigemBusInstalled())
                 {
                     SetStatus(BridgeStatus.Failed("ViGEmBus is not installed"));
                     Log("Startup blocked: ViGEmBus service was not found.");
+                    return;
+                }
+
+                if (SystemDiagnostics.IsSteamRunning())
+                {
+                    SetStatus(BridgeStatus.Failed("Close Steam and try again"));
+                    Log("Startup blocked: Steam is running and may claim the controller.");
                     return;
                 }
 
@@ -281,6 +292,7 @@ internal sealed class BridgeService : IDisposable
                 Log("Steam Controller connected.");
                 _gyroAllowed = true;
                 _lastGyroTogglePressed = false;
+                ResetEmergencyShortcut();
                 SetStatus(BridgeStatus.Working("Disabling lizard mode..."));
 
                 if (!_controller.DisableLizardMode())
@@ -347,6 +359,8 @@ internal sealed class BridgeService : IDisposable
         _gyroMouse.Reset();
         _keyboard.Reset();
         _fpsInput.Reset();
+        ResetEmergencyShortcut();
+        _dsuMotionServer.SetControllerConnected(false);
         _controller?.SendRumble(0, 0);
         _virtualController?.Dispose();
         _virtualController = null;
@@ -404,7 +418,9 @@ internal sealed class BridgeService : IDisposable
                 return;
             }
 
-            Log($"Playing MIDI haptic: {Path.GetFileName(path)}");
+            var mode = Options.MidiHapticPlaybackMode;
+            Log($"Playing MIDI haptic: {Path.GetFileName(path)} ({mode})");
+            DateTime? bassStopAt = null;
             foreach (var ev in sequence.Events)
             {
                 if (token.IsCancellationRequested)
@@ -414,15 +430,14 @@ internal sealed class BridgeService : IDisposable
 
                 if (ev.DelayMs > 0)
                 {
-                    Thread.Sleep(Math.Min(ev.DelayMs, 4000));
+                    bassStopAt = SleepMidiDelay(controller, Math.Min(ev.DelayMs, 4000), bassStopAt, token);
+                    if (token.IsCancellationRequested)
+                    {
+                        break;
+                    }
                 }
 
-                var velocity = (byte)Math.Clamp(210 + (ev.Velocity * 45 / 127), 220, 255);
-                controller.StopHapticTone(0);
-                controller.StopHapticTone(1);
-                Thread.Sleep(2);
-                controller.PlayHapticTone(0, ev.Frequency, velocity);
-                controller.PlayHapticTone(1, ev.Frequency, velocity);
+                bassStopAt = PlayMidiHapticEvent(controller, ev, mode);
             }
         }
         catch (Exception ex)
@@ -431,9 +446,107 @@ internal sealed class BridgeService : IDisposable
         }
         finally
         {
+            StopAllHapticTones(controller);
+            controller.SendRumble(0, 0);
+        }
+    }
+
+    private DateTime? PlayMidiHapticEvent(SteamControllerDevice controller, MidiHapticEvent ev, MidiHapticPlaybackMode mode)
+    {
+        if (mode == MidiHapticPlaybackMode.RumbleOnly)
+        {
+            return PlayBassPulse(controller, ev, force: true);
+        }
+
+        var velocity = CalculateMidiVelocity(ev);
+        if (mode == MidiHapticPlaybackMode.Simple)
+        {
             controller.StopHapticTone(0);
             controller.StopHapticTone(1);
+            Thread.Sleep(2);
+            controller.PlayHapticTone(0, ev.Frequency, velocity);
+            controller.PlayHapticTone(1, ev.Frequency, velocity);
+            return null;
         }
+
+        var channel = mode == MidiHapticPlaybackMode.PadsOnly
+            ? (byte)(ev.Channel % 2)
+            : (byte)(ev.Channel % 4);
+
+        controller.StopHapticTone(channel);
+        Thread.Sleep(2);
+        controller.PlayHapticTone(channel, ev.Frequency, velocity);
+        return mode == MidiHapticPlaybackMode.Full ? PlayBassPulse(controller, ev, force: false) : null;
+    }
+
+    private DateTime? PlayBassPulse(SteamControllerDevice controller, MidiHapticEvent ev, bool force)
+    {
+        if (!force && ev.Frequency > 155)
+        {
+            return null;
+        }
+
+        var intensity = (byte)Math.Clamp(80 + ev.Velocity + Math.Max(0, 155 - ev.Frequency) / 2, 60, 255);
+        intensity = ScaleRumble(intensity);
+        if (intensity == 0)
+        {
+            return null;
+        }
+
+        controller.SendRumble(intensity, intensity);
+        return DateTime.UtcNow.AddMilliseconds(force ? 70 : 45);
+    }
+
+    private static byte CalculateMidiVelocity(MidiHapticEvent ev)
+    {
+        var bassBoost = ev.Frequency < 180 ? 28 : ev.Frequency < 260 ? 12 : 0;
+        return (byte)Math.Clamp(185 + (ev.Velocity * 55 / 127) + bassBoost, 170, 255);
+    }
+
+    private static void StopAllHapticTones(SteamControllerDevice? controller)
+    {
+        if (controller is null)
+        {
+            return;
+        }
+
+        for (byte channel = 0; channel < 4; channel++)
+        {
+            controller.StopHapticTone(channel);
+        }
+    }
+
+    private static DateTime? SleepMidiDelay(SteamControllerDevice controller, int delayMs, DateTime? bassStopAt, CancellationToken token)
+    {
+        var remaining = Math.Max(0, delayMs);
+        while (remaining > 0 && !token.IsCancellationRequested)
+        {
+            var chunk = Math.Min(remaining, 25);
+            if (bassStopAt is { } stopAt)
+            {
+                var untilStop = (int)Math.Ceiling((stopAt - DateTime.UtcNow).TotalMilliseconds);
+                if (untilStop <= 0)
+                {
+                    controller.SendRumble(0, 0);
+                    bassStopAt = null;
+                }
+                else
+                {
+                    chunk = Math.Min(chunk, untilStop);
+                }
+            }
+
+            Thread.Sleep(Math.Max(1, chunk));
+            remaining -= chunk;
+        }
+
+        if (bassStopAt is { } finalStop && DateTime.UtcNow >= finalStop)
+        {
+            controller.SendRumble(0, 0);
+            return null;
+        }
+
+        return bassStopAt;
     }
 
     private async Task ReadLoop(CancellationToken token)
@@ -454,6 +567,13 @@ internal sealed class BridgeService : IDisposable
 
                 var input = new SteamControllerInput(buffer.AsSpan(0, count));
                 LatestInputSnapshot = InputSnapshot.FromInput(input);
+                _dsuMotionServer.Update(input);
+                UpdateEmergencyShortcut(input);
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
+
                 UpdateGyroToggle(input);
                 _virtualController?.Update(input, Options, _gyroAllowed);
                 _keyboard.Update(input, Options);
@@ -501,6 +621,85 @@ internal sealed class BridgeService : IDisposable
         _lastGyroTogglePressed = pressed;
     }
 
+    private void UpdateEmergencyShortcut(SteamControllerInput input)
+    {
+        if (!input.Back || !input.Start)
+        {
+            ResetEmergencyShortcut();
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        _emergencyShortcutStartedAt ??= now;
+        var held = now - _emergencyShortcutStartedAt.Value;
+
+        if (!_emergencyShortcutWarned && held >= TimeSpan.FromSeconds(3))
+        {
+            _emergencyShortcutWarned = true;
+            Log("Controller shortcut warning: release View + Menu to keep Bridge on.");
+            PlayEmergencyWarningChime();
+        }
+
+        if (_emergencyShortcutTriggered || held < TimeSpan.FromSeconds(5))
+        {
+            return;
+        }
+
+        _emergencyShortcutTriggered = true;
+        Log("Controller shortcut held for 5 seconds. Turning Bridge off and returning controller to Steam.");
+        Task.Run(() =>
+        {
+            lock (_gate)
+            {
+                StopInternal(userRequested: true, restoreLizard: true);
+                SetStatus(BridgeStatus.Idle("Disabled from controller shortcut"));
+            }
+        });
+    }
+
+    private void PlayEmergencyWarningChime()
+    {
+        SteamControllerDevice? controller;
+        lock (_gate)
+        {
+            controller = _controller;
+        }
+
+        if (controller is null)
+        {
+            return;
+        }
+
+        Task.Run(() =>
+        {
+            try
+            {
+                controller.PlayHapticTone(0, 220, 230);
+                controller.PlayHapticTone(1, 220, 230);
+                Thread.Sleep(90);
+                controller.StopHapticTone(0);
+                controller.StopHapticTone(1);
+                Thread.Sleep(55);
+                controller.PlayHapticTone(0, 165, 230);
+                controller.PlayHapticTone(1, 165, 230);
+                Thread.Sleep(100);
+                controller.StopHapticTone(0);
+                controller.StopHapticTone(1);
+            }
+            catch
+            {
+                // Best-effort warning only.
+            }
+        });
+    }
+
+    private void ResetEmergencyShortcut()
+    {
+        _emergencyShortcutStartedAt = null;
+        _emergencyShortcutWarned = false;
+        _emergencyShortcutTriggered = false;
+    }
+
     private static bool IsPressed(SteamControllerInput input, GyroToggleButton button)
     {
         return button switch
@@ -543,6 +742,7 @@ internal sealed class BridgeService : IDisposable
                 _gyroMouse.Reset();
                 _keyboard.Reset();
                 _fpsInput.Reset();
+                _dsuMotionServer.SetControllerConnected(false);
                 _virtualController?.Dispose();
                 _virtualController = null;
                 CleanupController(restoreLizard: false);
@@ -676,6 +876,11 @@ internal sealed class BridgeService : IDisposable
         _nextRumbleAt = DateTime.MinValue;
     }
 
+    private void SyncDsuMotionServer()
+    {
+        _dsuMotionServer.SetEnabled(Options.DsuMotionServerEnabled);
+    }
+
     private void SetStatus(BridgeStatus status)
     {
         Status = status;
@@ -694,5 +899,6 @@ internal sealed class BridgeService : IDisposable
         _keyboard.Reset();
         _fpsInput.Reset();
         StopMidiHaptic();
+        _dsuMotionServer.Dispose();
     }
 }
