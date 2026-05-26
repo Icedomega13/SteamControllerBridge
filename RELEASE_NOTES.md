@@ -58,6 +58,5 @@ Buttons should still come from the virtual Xbox controller. DSU is intended for 
 
 ## Release Assets
 
+- `SteamControllerBridgeSetup-0.10.0.exe`
 - `SteamControllerBridge-win-x64-self-contained-0.10.0.zip`
-
-Installer package: build `installer\SteamControllerBridge.iss` with Inno Setup 6 when `ISCC.exe` is available.
