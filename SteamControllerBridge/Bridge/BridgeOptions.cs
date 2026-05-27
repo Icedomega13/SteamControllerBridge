@@ -55,6 +55,7 @@ internal sealed class BridgeOptions
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
     public bool StartMinimizedToTray { get; set; }
+    public bool AutoStartBridge { get; set; }
     public bool AutoDisableForSteam { get; set; } = true;
     public bool DsuMotionServerEnabled { get; set; }
     public string StartupProfileName { get; set; } = string.Empty;

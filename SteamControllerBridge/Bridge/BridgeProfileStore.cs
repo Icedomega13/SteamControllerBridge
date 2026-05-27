@@ -101,6 +101,7 @@ internal static class BridgeProfileStore
         var profile = JsonSerializer.Deserialize<BridgeOptions>(JsonSerializer.Serialize(options, JsonOptions)) ?? new BridgeOptions();
         profile.StartWithWindows = false;
         profile.StartMinimizedToTray = false;
+        profile.AutoStartBridge = false;
         profile.AutoDisableForSteam = true;
         profile.DsuMotionServerEnabled = false;
         profile.StartupProfileName = string.Empty;

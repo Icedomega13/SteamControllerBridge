@@ -9,11 +9,10 @@ internal static class Program
         using var singleInstance = new Mutex(true, "SteamControllerBridge.SingleInstance", out var created);
         if (!created)
         {
-            MessageBox.Show("Steam Controller Bridge is already running.", "Steam Controller Bridge",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
+        Bridge.StartupManager.EnsureSingleStartupEntry();
         Application.Run(new MainForm());
     }
 }

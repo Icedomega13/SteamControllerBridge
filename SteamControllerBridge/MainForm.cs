@@ -93,6 +93,7 @@ internal sealed class MainForm : Form
     private readonly CheckBox _powerHapticChimeCheck = new();
     private readonly CheckBox _startWithWindowsCheck = new();
     private readonly CheckBox _startMinimizedToTrayCheck = new();
+    private readonly CheckBox _autoStartBridgeCheck = new();
     private readonly CheckBox _autoDisableForSteamCheck = new();
     private readonly CheckBox _dsuMotionServerCheck = new();
     private readonly Button _openLogButton = new();
@@ -110,6 +111,7 @@ internal sealed class MainForm : Form
     private bool _updatingOptions;
     private ControllerInput? _capturingKeyboardInput;
     private bool _testBackView;
+    private bool _startupActionsApplied;
     private string? _loadedProfileName;
     private string _loadedProfileSignature = string.Empty;
 
@@ -493,6 +495,12 @@ internal sealed class MainForm : Form
         _startMinimizedToTrayCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
         _toolTip.SetToolTip(_startMinimizedToTrayCheck, "Hide the main window on launch and keep Steam Controller Bridge in the system tray.");
 
+        _autoStartBridgeCheck.Text = "Xbox mode on launch";
+        _autoStartBridgeCheck.AutoSize = true;
+        _autoStartBridgeCheck.Margin = new Padding(0, 0, 18, 0);
+        _autoStartBridgeCheck.CheckedChanged += (_, _) => SaveOptionsFromUi();
+        _toolTip.SetToolTip(_autoStartBridgeCheck, "Automatically turn the bridge on when the app opens, so Windows sees the controller as an Xbox controller.");
+
         _autoDisableForSteamCheck.Text = "Back off when Steam opens";
         _autoDisableForSteamCheck.AutoSize = true;
         _autoDisableForSteamCheck.Margin = new Padding(0, 0, 18, 0);
@@ -509,6 +517,7 @@ internal sealed class MainForm : Form
         _quickOptionsContent.Controls.Add(_powerHapticChimeCheck);
         _quickOptionsContent.Controls.Add(_startWithWindowsCheck);
         _quickOptionsContent.Controls.Add(_startMinimizedToTrayCheck);
+        _quickOptionsContent.Controls.Add(_autoStartBridgeCheck);
         _quickOptionsContent.Controls.Add(_autoDisableForSteamCheck);
         _quickOptionsContent.Controls.Add(_dsuMotionServerCheck);
         _quickOptionsPanel.Controls.Add(_quickOptionsContent);
@@ -1535,6 +1544,7 @@ internal sealed class MainForm : Form
         _bridge.Options.StartWithWindows = StartupManager.IsEnabled();
         _startWithWindowsCheck.Checked = _bridge.Options.StartWithWindows;
         _startMinimizedToTrayCheck.Checked = _bridge.Options.StartMinimizedToTray;
+        _autoStartBridgeCheck.Checked = _bridge.Options.AutoStartBridge;
         _autoDisableForSteamCheck.Checked = _bridge.Options.AutoDisableForSteam;
         _dsuMotionServerCheck.Checked = _bridge.Options.DsuMotionServerEnabled;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
@@ -1589,6 +1599,7 @@ internal sealed class MainForm : Form
         _bridge.Options.TrackpadClickEnabled = _trackpadClickCheck.Checked;
         _bridge.Options.StartWithWindows = _startWithWindowsCheck.Checked;
         _bridge.Options.StartMinimizedToTray = _startMinimizedToTrayCheck.Checked;
+        _bridge.Options.AutoStartBridge = _autoStartBridgeCheck.Checked;
         _bridge.Options.AutoDisableForSteam = _autoDisableForSteamCheck.Checked;
         _bridge.Options.DsuMotionServerEnabled = _dsuMotionServerCheck.Checked;
         _bridge.Options.StartupProfileName = SelectedStartupProfileName();
@@ -2192,12 +2203,26 @@ internal sealed class MainForm : Form
     protected override void OnShown(EventArgs e)
     {
         base.OnShown(e);
-        if (_bridge.Options.StartMinimizedToTray)
+        if (_startupActionsApplied)
+        {
+            return;
+        }
+
+        _startupActionsApplied = true;
+        if (_bridge.Options.StartMinimizedToTray || _bridge.Options.AutoStartBridge)
         {
             BeginInvoke(new Action(() =>
             {
-                WindowState = FormWindowState.Minimized;
-                Hide();
+                if (_bridge.Options.StartMinimizedToTray)
+                {
+                    WindowState = FormWindowState.Minimized;
+                    Hide();
+                }
+
+                if (_bridge.Options.AutoStartBridge)
+                {
+                    StartBridgeAsync();
+                }
             }));
         }
     }

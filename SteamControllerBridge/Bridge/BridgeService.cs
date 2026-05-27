@@ -193,6 +193,7 @@ internal sealed class BridgeService : IDisposable
         return new AppSettings(
             options.StartWithWindows,
             options.StartMinimizedToTray,
+            options.AutoStartBridge,
             options.AutoDisableForSteam,
             options.DsuMotionServerEnabled,
             options.StartupProfileName);
@@ -202,6 +203,7 @@ internal sealed class BridgeService : IDisposable
     {
         options.StartWithWindows = appSettings.StartWithWindows;
         options.StartMinimizedToTray = appSettings.StartMinimizedToTray;
+        options.AutoStartBridge = appSettings.AutoStartBridge;
         options.AutoDisableForSteam = appSettings.AutoDisableForSteam;
         options.DsuMotionServerEnabled = appSettings.DsuMotionServerEnabled;
         options.StartupProfileName = appSettings.StartupProfileName;
@@ -210,6 +212,7 @@ internal sealed class BridgeService : IDisposable
     private readonly record struct AppSettings(
         bool StartWithWindows,
         bool StartMinimizedToTray,
+        bool AutoStartBridge,
         bool AutoDisableForSteam,
         bool DsuMotionServerEnabled,
         string StartupProfileName);

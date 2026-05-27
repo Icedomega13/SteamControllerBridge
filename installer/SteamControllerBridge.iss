@@ -1,5 +1,5 @@
 #define MyAppName "Steam Controller Bridge"
-#define MyAppVersion "0.10.1"
+#define MyAppVersion "0.10.2"
 #define MyAppPublisher "Steam Controller Bridge contributors"
 #define MyAppExeName "SteamControllerBridge.exe"
 
@@ -24,7 +24,6 @@ ArchitecturesAllowed=x64compatible
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
-Name: "startup"; Description: "Start Steam Controller Bridge when Windows starts"; GroupDescription: "Startup:"
 
 [Files]
 Source: "..\dist\SteamControllerBridge-win-x64-self-contained\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -32,7 +31,6 @@ Source: "..\dist\SteamControllerBridge-win-x64-self-contained\*"; DestDir: "{app
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startup
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
