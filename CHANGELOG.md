@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.10.1
+
+- Reworked Xbox rumble passthrough with a softer non-linear response curve for less aggressive game rumble.
+- Changed the default rumble intensity to `50%` and capped the user-facing range at `0-100%`.
+- Updated the rumble intensity slider to snap in `5%` increments.
+- Changed rumble slider double-click reset to return to the balanced `50%` center.
+- Added red/green tray icon status dots so users can see whether Bridge is active from the system tray.
+
 ## 0.10.0
 
 - Added an experimental DSU/Cemuhook motion server toggle for emulator-native gyro/accelerometer output on `127.0.0.1:26760`.

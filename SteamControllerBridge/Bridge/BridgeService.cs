@@ -4,6 +4,7 @@ namespace SteamControllerBridge.Bridge;
 
 internal sealed class BridgeService : IDisposable
 {
+    private const int MaxSteamControllerRumbleByte = 150;
     private readonly object _gate = new();
     private CancellationTokenSource? _readLoopCts;
     private Task? _readLoopTask;
@@ -853,7 +854,10 @@ internal sealed class BridgeService : IDisposable
             return 0;
         }
 
-        var scaled = (int)Math.Round(value * (Options.RumbleIntensityPercent / 100.0));
+        var input = value / 255.0;
+        var response = Math.Pow(input, 1.35);
+        var intensity = Options.RumbleIntensityPercent / 100.0;
+        var scaled = (int)Math.Round(response * MaxSteamControllerRumbleByte * intensity);
         return (byte)Math.Clamp(scaled, 0, byte.MaxValue);
     }
 

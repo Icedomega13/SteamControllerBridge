@@ -16,7 +16,7 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.10.0.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.10.1.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
 6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.

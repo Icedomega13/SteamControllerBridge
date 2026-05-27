@@ -124,7 +124,7 @@ internal sealed class SteamControllerDevice : IDisposable
 
         // Best-effort Steam Controller 2026 haptic output report layout, matching the
         // public SDL driver shape: intensity, left speed/gain, right speed/gain.
-        WriteUInt16(report, 2, (ushort)Math.Clamp(Math.Max(smallMotor, largeMotor) * 4, 0, ushort.MaxValue));
+        WriteUInt16(report, 2, (ushort)Math.Clamp(Math.Max(smallMotor, largeMotor) * 3, 0, ushort.MaxValue));
         WriteUInt16(report, 4, 160);
         report[6] = ToSignedGain(smallMotor);
         WriteUInt16(report, 7, 320);

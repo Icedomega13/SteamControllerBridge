@@ -1,6 +1,6 @@
-# Steam Controller Bridge v0.10.0
+# Steam Controller Bridge v0.10.1
 
-Public test build focused on experimental DSU/Cemuhook motion output, safer controller shutdown, haptic playback expansion, and release packaging fixes.
+Focused polish build for calmer, more usable haptics.
 
 ## Highlights
 
@@ -8,31 +8,18 @@ Public test build focused on experimental DSU/Cemuhook motion output, safer cont
 - Supports Valve `0x1302`, `0x1303`, and `0x1304` Steam Controller HID product IDs.
 - Includes full button remapping, keyboard mapping, turbo, presets, and saveable profiles.
 - Includes mouse/gyro tools, Old School FPS mode, trackpad-as-mouse, and trackpad-as-stick mode.
-- Adds an experimental DSU/Cemuhook motion server for emulator-native gyro/accelerometer testing.
-- Includes an Input Test page with front/back controller views, live physical input indicators, rumble intensity, test rumble, test chime, and local MIDI haptic playback.
-- Includes optional haptic power chimes when the bridge turns on or off.
-- Includes Start with Windows, Start minimized to tray, and automatic Steam handoff behavior.
+- Includes experimental DSU/Cemuhook motion output for emulator testing.
+- Includes an Input Test page with live controller state, rumble intensity, test rumble, test chime, and local MIDI haptic playback.
 
-## Changes in 0.10.0
+## Changes in 0.10.1
 
-- Added a `DSU motion` quick toggle.
-- Added a built-in DSU/Cemuhook UDP motion server on `127.0.0.1:26760`.
-- Added app log guidance for emulator DSU setup.
-- Added a controller shortcut to turn Bridge off by holding View + Menu for 5 seconds, with a warning chime after 3 seconds.
-- Added expanded MIDI haptic playback modes for fuller pad/rumble output.
-- Fixed portable and installer packaging so all PNG assets publish into the external `Assets` folder.
-- Replaced inactive navigation artwork with the latest matched icon set.
-
-## DSU Motion Notes
-
-DSU motion is experimental in this release. The server has been confirmed reachable by DSU test tools, but real emulator/game testing is still needed for axis orientation, sensitivity, and drift tuning.
-
-For Cemu or other DSU-compatible emulators, enable `DSU motion` in Steam Controller Bridge and add a DSU/Cemuhook motion source at:
-
-- IP: `127.0.0.1`
-- Port: `26760`
-
-Buttons should still come from the virtual Xbox controller. DSU is intended for motion data only.
+- Reworked game rumble passthrough so XInput rumble is less harsh on the Steam Controller haptics.
+- Added a softer non-linear rumble curve to preserve subtle effects and tame full-strength spikes.
+- Changed the default rumble intensity from `100%` to `50%`.
+- Changed the rumble slider range to `0-100%`.
+- Added `5%` snapping to the rumble intensity slider.
+- Changed double-click reset on the rumble slider to return to `50%`.
+- Added red/green tray icon status dots for inactive/active bridge state.
 
 ## Requirements
 
@@ -54,9 +41,9 @@ Buttons should still come from the virtual Xbox controller. DSU is intended for 
 - DSU/Cemuhook motion output is experimental and may need per-emulator tuning.
 - HidHide duplicate-device handling is not integrated.
 - Remapping is currently global rather than per-game.
-- Rumble, haptics, and MIDI playback are best-effort and may need more hardware tuning.
+- Haptic behavior is still best-effort and may need more game-by-game tuning.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.10.0.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.10.0.zip`
+- `SteamControllerBridgeSetup-0.10.1.exe`
+- `SteamControllerBridge-win-x64-self-contained-0.10.1.zip`

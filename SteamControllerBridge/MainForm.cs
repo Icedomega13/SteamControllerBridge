@@ -100,6 +100,8 @@ internal sealed class MainForm : Form
     private readonly System.Windows.Forms.Timer _lifecycleTimer = new();
     private ToolStripMenuItem? _rumbleTrayItem;
     private readonly Icon _appIcon;
+    private readonly Icon _trayActiveIcon;
+    private readonly Icon _trayIdleIcon;
     private readonly Image? _controllerOnImage;
     private readonly Image? _controllerOffImage;
     private readonly Image? _logoAsset;
@@ -120,6 +122,8 @@ internal sealed class MainForm : Form
         Font = new Font("Segoe UI", 9F);
         KeyPreview = true;
         _appIcon = LoadAppIcon();
+        _trayActiveIcon = CreateTrayStatusIcon(_appIcon, Color.FromArgb(91, 244, 183));
+        _trayIdleIcon = CreateTrayStatusIcon(_appIcon, Color.FromArgb(255, 85, 85));
         Icon = _appIcon;
         _controllerOnImage = LoadSoftImageAsset("ControllerON.png");
         _controllerOffImage = LoadSoftImageAsset("ControllerOFF.png");
@@ -154,6 +158,8 @@ internal sealed class MainForm : Form
             _lifecycleTimer.Stop();
             _inputTestTimer.Stop();
             _trayIcon.Dispose();
+            _trayActiveIcon.Dispose();
+            _trayIdleIcon.Dispose();
             _appIcon.Dispose();
             _controllerOnImage?.Dispose();
             _controllerOffImage?.Dispose();
@@ -806,19 +812,21 @@ internal sealed class MainForm : Form
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52));
 
         _rumbleIntensitySlider.Minimum = 0;
-        _rumbleIntensitySlider.Maximum = 200;
-        _rumbleIntensitySlider.TickFrequency = 50;
+        _rumbleIntensitySlider.Maximum = 100;
+        _rumbleIntensitySlider.TickFrequency = 25;
         _rumbleIntensitySlider.SmallChange = 5;
-        _rumbleIntensitySlider.LargeChange = 25;
+        _rumbleIntensitySlider.LargeChange = 10;
         _rumbleIntensitySlider.Dock = DockStyle.Fill;
         _rumbleIntensitySlider.Margin = new Padding(0, 0, 8, 0);
         _rumbleIntensitySlider.ValueChanged += (_, _) =>
         {
+            SnapRumbleIntensitySlider();
             _rumbleIntensityValue.Text = $"{_rumbleIntensitySlider.Value}%";
             SaveOptionsFromUi();
         };
-        _rumbleIntensitySlider.DoubleClick += (_, _) => _rumbleIntensitySlider.Value = 100;
-        _toolTip.SetToolTip(_rumbleIntensitySlider, "0% disables haptic rumble, 100% is normal, 200% is boosted. Double-click to reset to 100%.");
+        _rumbleIntensitySlider.DoubleClick += (_, _) => ResetRumbleIntensitySlider();
+        _rumbleIntensitySlider.MouseDoubleClick += (_, _) => ResetRumbleIntensitySlider();
+        _toolTip.SetToolTip(_rumbleIntensitySlider, "0% disables haptic rumble, 50% is balanced, 100% is maximum. Moves in 5% steps. Double-click to reset to 50%.");
 
         _rumbleIntensityValue.AutoSize = true;
         _rumbleIntensityValue.Anchor = AnchorStyles.Left;
@@ -1531,8 +1539,9 @@ internal sealed class MainForm : Form
         _dsuMotionServerCheck.Checked = _bridge.Options.DsuMotionServerEnabled;
         _gyroMouseCheck.Checked = _bridge.Options.GyroMouseEnabled;
         _rumbleCheck.Checked = _bridge.Options.RumbleEnabled;
-        _rumbleIntensitySlider.Value = _bridge.Options.RumbleIntensityPercent;
-        _rumbleIntensityValue.Text = $"{_bridge.Options.RumbleIntensityPercent}%";
+        var rumbleIntensity = SnapPercent(_bridge.Options.RumbleIntensityPercent);
+        _rumbleIntensitySlider.Value = rumbleIntensity;
+        _rumbleIntensityValue.Text = $"{rumbleIntensity}%";
         _midiHapticFileBox.Text = string.IsNullOrWhiteSpace(_bridge.Options.MidiHapticFilePath)
             ? string.Empty
             : Path.GetFileName(_bridge.Options.MidiHapticFilePath);
@@ -1585,7 +1594,7 @@ internal sealed class MainForm : Form
         _bridge.Options.StartupProfileName = SelectedStartupProfileName();
         _bridge.Options.GyroMouseEnabled = _gyroMouseCheck.Checked;
         _bridge.Options.RumbleEnabled = _rumbleCheck.Checked;
-        _bridge.Options.RumbleIntensityPercent = _rumbleIntensitySlider.Value;
+        _bridge.Options.RumbleIntensityPercent = SnapPercent(_rumbleIntensitySlider.Value);
         _bridge.Options.PowerHapticChimeEnabled = _powerHapticChimeCheck.Checked;
         _bridge.Options.MidiHapticPlaybackMode = (MidiHapticPlaybackMode)(_midiHapticModeCombo.SelectedItem ?? _bridge.Options.MidiHapticPlaybackMode);
         _bridge.SaveOptions();
@@ -1884,6 +1893,25 @@ internal sealed class MainForm : Form
 
     }
 
+    private void SnapRumbleIntensitySlider()
+    {
+        var snapped = SnapPercent(_rumbleIntensitySlider.Value);
+        if (_rumbleIntensitySlider.Value != snapped)
+        {
+            _rumbleIntensitySlider.Value = snapped;
+        }
+    }
+
+    private void ResetRumbleIntensitySlider()
+    {
+        _rumbleIntensitySlider.Value = 50;
+    }
+
+    private static int SnapPercent(int value)
+    {
+        return Math.Clamp((int)Math.Round(value / 5.0) * 5, 0, 100);
+    }
+
     private void UpdateInputTest()
     {
         if (_testValueLabels.Count == 0)
@@ -1934,6 +1962,7 @@ internal sealed class MainForm : Form
         _controllerPowerImage.Image = status.IsEnabled ? _controllerOnImage : _controllerOffImage;
         _toolTip.SetToolTip(_controllerPowerImage, status.IsEnabled ? "Click to disconnect" : "Click to connect");
         _trayIcon.Text = ClampTrayText($"Steam Controller Bridge - {status.Message}");
+        _trayIcon.Icon = status.IsEnabled ? _trayActiveIcon : _trayIdleIcon;
         ApplyTheme();
     }
 
@@ -2200,6 +2229,36 @@ internal sealed class MainForm : Form
         var icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         return icon ?? SystemIcons.Application;
     }
+
+    private static Icon CreateTrayStatusIcon(Icon baseIcon, Color statusColor)
+    {
+        const int size = 32;
+        var bitmap = new Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+        using (var graphics = Graphics.FromImage(bitmap))
+        {
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            graphics.Clear(Color.Transparent);
+            graphics.DrawIcon(baseIcon, new Rectangle(0, 0, size, size));
+
+            using var shadow = new SolidBrush(Color.FromArgb(180, 0, 0, 0));
+            using var fill = new SolidBrush(statusColor);
+            using var outline = new Pen(Color.FromArgb(235, 245, 255, 255), 1.5f);
+            graphics.FillEllipse(shadow, 17, 17, 13, 13);
+            graphics.FillEllipse(fill, 18, 18, 11, 11);
+            graphics.DrawEllipse(outline, 18, 18, 11, 11);
+        }
+
+        var handle = bitmap.GetHicon();
+        using var temporary = Icon.FromHandle(handle);
+        var icon = (Icon)temporary.Clone();
+        DestroyIcon(handle);
+        bitmap.Dispose();
+        return icon;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    private static extern bool DestroyIcon(IntPtr hIcon);
 
     private void LoadNavigationImages()
     {

@@ -48,7 +48,7 @@ internal sealed class BridgeOptions
     public bool LeftTriggerTurbo { get; set; }
     public bool RightTriggerTurbo { get; set; }
     public bool RumbleEnabled { get; set; } = true;
-    public int RumbleIntensityPercent { get; set; } = 100;
+    public int RumbleIntensityPercent { get; set; } = 50;
     public bool PowerHapticChimeEnabled { get; set; } = true;
     public string MidiHapticFilePath { get; set; } = string.Empty;
     public MidiHapticPlaybackMode MidiHapticPlaybackMode { get; set; } = MidiHapticPlaybackMode.Simple;
@@ -90,7 +90,7 @@ internal sealed class BridgeOptions
         GyroStickDeadZone = Math.Clamp(GyroStickDeadZone, 0, 300);
         RightStickMouseSensitivity = Math.Clamp(RightStickMouseSensitivity, 1, 80);
         TurboIntervalMs = Math.Clamp(TurboIntervalMs, 25, 500);
-        RumbleIntensityPercent = Math.Clamp(RumbleIntensityPercent, 0, 200);
+        RumbleIntensityPercent = Math.Clamp(RumbleIntensityPercent, 0, 100);
     }
 
     public int GetKeyboardKey(ControllerInput input)
