@@ -124,11 +124,22 @@ internal sealed class SteamControllerDevice : IDisposable
 
         // Best-effort Steam Controller 2026 haptic output report layout, matching the
         // public SDL driver shape: intensity, left speed/gain, right speed/gain.
-        WriteUInt16(report, 2, (ushort)Math.Clamp(Math.Max(smallMotor, largeMotor) * 3, 0, ushort.MaxValue));
-        WriteUInt16(report, 4, 160);
-        report[6] = ToSignedGain(smallMotor);
-        WriteUInt16(report, 7, 320);
-        report[9] = ToSignedGain(largeMotor);
+        // XInput gives us low-frequency "large" and high-frequency "small" motors,
+        // not true left/right motors. Blend them into both haptics so rumble feels
+        // fuller while still biasing heavy hits low and texture buzzes high.
+        var low = largeMotor / 255.0;
+        var high = smallMotor / 255.0;
+        var leftGain = ToSignedGain(BlendRumbleGain(low * 0.95 + high * 0.30));
+        var rightGain = ToSignedGain(BlendRumbleGain(high * 0.95 + low * 0.30));
+        var drive = Math.Max(leftGain, rightGain);
+        var leftSpeed = (ushort)Math.Clamp(130 + (int)Math.Round(high * 70), 120, 220);
+        var rightSpeed = (ushort)Math.Clamp(270 + (int)Math.Round(high * 120) - (int)Math.Round(low * 40), 220, 420);
+
+        WriteUInt16(report, 2, (ushort)Math.Clamp(drive * 6, 0, ushort.MaxValue));
+        WriteUInt16(report, 4, leftSpeed);
+        report[6] = leftGain;
+        WriteUInt16(report, 7, rightSpeed);
+        report[9] = rightGain;
         return _device.SendOutputReport(report);
     }
 
@@ -190,6 +201,11 @@ internal sealed class SteamControllerDevice : IDisposable
     private static byte ToSignedGain(byte motor)
     {
         return (byte)Math.Clamp(motor / 2, 0, 127);
+    }
+
+    private static byte BlendRumbleGain(double value)
+    {
+        return (byte)Math.Clamp((int)Math.Round(value * 255), 0, 255);
     }
 
     public void Dispose()

@@ -63,6 +63,12 @@ internal sealed class MainForm : Form
     private readonly Button _deleteProfileButton = new();
     private readonly Button _duplicateProfileButton = new();
     private readonly Button _resetDefaultButton = new();
+    private readonly TextBox _profileHookExeBox = new();
+    private readonly ComboBox _profileHookProfileCombo = new();
+    private readonly Button _browseProfileHookExeButton = new();
+    private readonly Button _addProfileHookButton = new();
+    private readonly Button _removeProfileHookButton = new();
+    private readonly ListBox _profileHooksList = new();
     private readonly ComboBox _trackpadSourceCombo = new();
     private readonly CheckBox _trackpadStickCheck = new();
     private readonly ComboBox _trackpadStickSourceCombo = new();
@@ -98,6 +104,7 @@ internal sealed class MainForm : Form
     private readonly CheckBox _dsuMotionServerCheck = new();
     private readonly Button _openLogButton = new();
     private readonly Button _copyDiagnosticsButton = new();
+    private readonly Button _checkUpdatesButton = new();
     private readonly System.Windows.Forms.Timer _lifecycleTimer = new();
     private ToolStripMenuItem? _rumbleTrayItem;
     private readonly Icon _appIcon;
@@ -154,6 +161,7 @@ internal sealed class MainForm : Form
 
         _bridge.StatusChanged += (_, status) => OnUi(() => ApplyStatus(status));
         _bridge.LogWritten += (_, line) => OnUi(() => AppendLog(line));
+        _bridge.ProfileHookApplied += (_, profileName) => OnUi(() => ApplyProfileHookToUi(profileName));
         FormClosing += (_, _) =>
         {
             _bridge.Dispose();
@@ -178,6 +186,16 @@ internal sealed class MainForm : Form
 
         ApplyStatus(_bridge.Status);
         ApplyTheme();
+    }
+
+    private void ApplyProfileHookToUi(string profileName)
+    {
+        _loadedProfileName = profileName;
+        _loadedProfileSignature = BridgeProfileStore.GetProfileSignature(_bridge.Options);
+        LoadOptionsIntoUi();
+        RefreshProfiles(profileName);
+        _profileNameBox.Text = profileName;
+        UpdateProfileDirtyState();
     }
 
     private void BuildUi()
@@ -535,6 +553,7 @@ internal sealed class MainForm : Form
         ConfigureCombo(_presetCombo, Enum.GetValues<RemapPreset>());
         ConfigureCombo(_profileCombo, Array.Empty<string>());
         ConfigureCombo(_startupProfileCombo, Array.Empty<string>());
+        ConfigureCombo(_profileHookProfileCombo, Array.Empty<string>());
         ConfigureCombo(_gyroActivationCombo, Enum.GetValues<GyroMouseActivation>());
         ConfigureCombo(_gyroOutputCombo, Enum.GetValues<GyroOutputMode>());
         ConfigureCombo(_gyroToggleCombo, Enum.GetValues<GyroToggleButton>());
@@ -590,7 +609,7 @@ internal sealed class MainForm : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-        for (var row = 0; row < 8; row++)
+        for (var row = 0; row < 14; row++)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         }
@@ -670,6 +689,58 @@ internal sealed class MainForm : Form
         profileActions.Controls.Add(_resetDefaultButton);
         layout.Controls.Add(profileActions, 1, 7);
         layout.SetColumnSpan(profileActions, 2);
+
+        var hookHeader = new Label
+        {
+            Text = "Auto profile hooks",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Font = new Font(Font, FontStyle.Bold),
+            Margin = new Padding(0, 22, 8, 4)
+        };
+        layout.Controls.Add(hookHeader, 0, 8);
+        layout.SetColumnSpan(hookHeader, 3);
+
+        var hookExeLabel = new Label
+        {
+            Text = "Game/app exe",
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            Margin = new Padding(0, 6, 8, 0)
+        };
+        _profileHookExeBox.Dock = DockStyle.Fill;
+        _profileHookExeBox.Margin = new Padding(0, 7, 8, 0);
+        layout.Controls.Add(hookExeLabel, 0, 9);
+        layout.Controls.Add(_profileHookExeBox, 1, 9);
+        ConfigureSmallButton(_browseProfileHookExeButton, "Browse");
+        _browseProfileHookExeButton.Click += (_, _) => BrowseProfileHookExe();
+        layout.Controls.Add(_browseProfileHookExeButton, 2, 9);
+
+        AddOptionRow(layout, 10, "Hook profile", _profileHookProfileCombo);
+        ConfigureSmallButton(_addProfileHookButton, "Add");
+        _addProfileHookButton.Click += (_, _) => AddProfileHook();
+        layout.Controls.Add(_addProfileHookButton, 2, 10);
+
+        _profileHooksList.Dock = DockStyle.Fill;
+        _profileHooksList.Height = 90;
+        _profileHooksList.Margin = new Padding(0, 8, 8, 0);
+        _profileHooksList.BorderStyle = BorderStyle.None;
+        _profileHooksList.DrawMode = DrawMode.OwnerDrawFixed;
+        _profileHooksList.ItemHeight = 24;
+        _profileHooksList.DrawItem += (_, e) =>
+        {
+            e.DrawBackground();
+            if (e.Index >= 0)
+            {
+                using var brush = new SolidBrush(Color.FromArgb(226, 235, 248));
+                e.Graphics.DrawString(_profileHooksList.Items[e.Index]?.ToString() ?? string.Empty, Font, brush, e.Bounds.X + 6, e.Bounds.Y + 4);
+            }
+        };
+        layout.Controls.Add(_profileHooksList, 1, 11);
+        ConfigureSmallButton(_removeProfileHookButton, "Remove");
+        _removeProfileHookButton.Click += (_, _) => RemoveSelectedProfileHook();
+        layout.Controls.Add(_removeProfileHookButton, 2, 11);
+
         tab.Controls.Add(layout);
         return tab;
     }
@@ -908,7 +979,7 @@ internal sealed class MainForm : Form
         _midiHapticFileBox.Margin = new Padding(0, 6, 6, 0);
         _midiHapticModeCombo.Margin = new Padding(0, 6, 6, 0);
         _midiHapticModeCombo.SelectedIndexChanged += (_, _) => SaveOptionsFromUi();
-        _toolTip.SetToolTip(_midiHapticModeCombo, "Simple mirrors one note to both pads. Full routes MIDI channels across more haptic outputs and adds bass rumble.");
+        _toolTip.SetToolTip(_midiHapticModeCombo, "Smart picks one useful note per haptic. Simple mirrors notes. Full routes MIDI channels across more haptic outputs and adds bass rumble.");
 
         ConfigureSmallButton(_browseMidiHapticButton, "Load");
         ConfigureSmallButton(_playMidiHapticButton, "Play");
@@ -1062,8 +1133,12 @@ internal sealed class MainForm : Form
         _copyDiagnosticsButton.Text = "Copy diagnostics";
         _copyDiagnosticsButton.AutoSize = true;
         _copyDiagnosticsButton.Click += (_, _) => CopyDiagnostics();
+        _checkUpdatesButton.Text = "Check for updates";
+        _checkUpdatesButton.AutoSize = true;
+        _checkUpdatesButton.Click += async (_, _) => await CheckForUpdatesAsync(userInitiated: true);
         actions.Controls.Add(_openLogButton);
         actions.Controls.Add(_copyDiagnosticsButton);
+        actions.Controls.Add(_checkUpdatesButton);
 
         _logBox.Multiline = true;
         _logBox.ReadOnly = true;
@@ -1647,15 +1722,18 @@ internal sealed class MainForm : Form
     private void RefreshProfiles(string? selectedProfile = null)
     {
         var current = selectedProfile ?? _profileCombo.SelectedItem as string;
+        var currentHookProfile = _profileHookProfileCombo.SelectedItem as string;
         var startup = _bridge.Options.StartupProfileName;
         _profileCombo.Items.Clear();
         _startupProfileCombo.Items.Clear();
+        _profileHookProfileCombo.Items.Clear();
         _startupProfileCombo.Items.Add("<None>");
         var profiles = BridgeProfileStore.ListProfiles();
         foreach (var profile in profiles)
         {
             _profileCombo.Items.Add(profile);
             _startupProfileCombo.Items.Add(profile);
+            _profileHookProfileCombo.Items.Add(profile);
         }
 
         if (current is not null && _profileCombo.Items.Contains(current))
@@ -1673,6 +1751,17 @@ internal sealed class MainForm : Form
         _duplicateProfileButton.Enabled = hasSelection;
         _deleteProfileButton.Enabled = hasSelection;
 
+        if (currentHookProfile is not null && _profileHookProfileCombo.Items.Contains(currentHookProfile))
+        {
+            _profileHookProfileCombo.SelectedItem = currentHookProfile;
+        }
+        else if (_profileHookProfileCombo.Items.Count > 0)
+        {
+            _profileHookProfileCombo.SelectedIndex = 0;
+        }
+
+        _addProfileHookButton.Enabled = _profileHookProfileCombo.SelectedItem is not null;
+
         if (!string.IsNullOrWhiteSpace(startup) && _startupProfileCombo.Items.Contains(startup))
         {
             _startupProfileCombo.SelectedItem = startup;
@@ -1683,6 +1772,83 @@ internal sealed class MainForm : Form
         }
 
         UpdateProfileDirtyState();
+        RefreshProfileHooks();
+    }
+
+    private void RefreshProfileHooks()
+    {
+        if (_profileHooksList.IsDisposed)
+        {
+            return;
+        }
+
+        _profileHooksList.Items.Clear();
+        _bridge.Options.Normalize();
+        foreach (var hook in _bridge.Options.ProfileHooks)
+        {
+            var exe = Path.GetFileName(hook.ExePath);
+            _profileHooksList.Items.Add($"{exe} -> {hook.ProfileName}");
+        }
+
+        _removeProfileHookButton.Enabled = _profileHooksList.Items.Count > 0;
+    }
+
+    private void BrowseProfileHookExe()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Choose game or app executable",
+            Filter = "Programs (*.exe)|*.exe|All files (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        _profileHookExeBox.Text = dialog.FileName;
+    }
+
+    private void AddProfileHook()
+    {
+        var exePath = _profileHookExeBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath))
+        {
+            MessageBox.Show(this, "Choose a valid .exe first.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        if (_profileHookProfileCombo.SelectedItem is not string profile || !BridgeProfileStore.Exists(profile))
+        {
+            MessageBox.Show(this, "Choose a saved profile first.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        _bridge.Options.ProfileHooks.RemoveAll(hook => string.Equals(hook.ExePath, exePath, StringComparison.OrdinalIgnoreCase));
+        _bridge.Options.ProfileHooks.Add(new ProfileHook
+        {
+            ExePath = exePath,
+            ProfileName = profile,
+            Enabled = true
+        });
+        _bridge.SaveOptions();
+        RefreshProfileHooks();
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Added profile hook: {Path.GetFileName(exePath)} -> {profile}");
+    }
+
+    private void RemoveSelectedProfileHook()
+    {
+        var index = _profileHooksList.SelectedIndex;
+        if (index < 0 || index >= _bridge.Options.ProfileHooks.Count)
+        {
+            return;
+        }
+
+        var hook = _bridge.Options.ProfileHooks[index];
+        _bridge.Options.ProfileHooks.RemoveAt(index);
+        _bridge.SaveOptions();
+        RefreshProfileHooks();
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Removed profile hook: {Path.GetFileName(hook.ExePath)} -> {hook.ProfileName}");
     }
 
     private void SaveProfile()
@@ -1852,9 +2018,10 @@ internal sealed class MainForm : Form
         if (_bridge.Options.StartupProfileName == name)
         {
             _bridge.Options.StartupProfileName = string.Empty;
-            _bridge.SaveOptions();
         }
 
+        _bridge.Options.ProfileHooks.RemoveAll(hook => string.Equals(hook.ProfileName, name, StringComparison.OrdinalIgnoreCase));
+        _bridge.SaveOptions();
         RefreshProfiles();
         UpdateProfileDirtyState();
         AppendLog($"{DateTime.Now:HH:mm:ss}  Deleted profile: {name}");
@@ -2022,7 +2189,7 @@ internal sealed class MainForm : Form
             control.ForeColor = fore;
             control.BackColor = control switch
             {
-                TextBox or ComboBox or NumericUpDown => input,
+                TextBox or ComboBox or NumericUpDown or ListBox => input,
                 TabPage => back,
                 Button => button,
                 FlowLayoutPanel or TableLayoutPanel => back,
@@ -2131,6 +2298,73 @@ internal sealed class MainForm : Form
         catch (Exception ex)
         {
             MessageBox.Show(this, ex.Message, "Could not copy diagnostics", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task CheckForUpdatesAsync(bool userInitiated)
+    {
+        _checkUpdatesButton.Enabled = false;
+        var previousText = _checkUpdatesButton.Text;
+        _checkUpdatesButton.Text = "Checking...";
+        AppendLog($"{DateTime.Now:HH:mm:ss}  Checking GitHub for updates...");
+
+        try
+        {
+            using var checkCts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            var update = await GitHubUpdateService.CheckForUpdatesAsync(checkCts.Token);
+            AppendLog($"{DateTime.Now:HH:mm:ss}  Current version {update.CurrentVersion}; latest GitHub release {update.LatestVersion}.");
+
+            if (!update.IsUpdateAvailable)
+            {
+                if (userInitiated)
+                {
+                    MessageBox.Show(this, "You are already running the latest version.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                return;
+            }
+
+            var assetText = string.IsNullOrWhiteSpace(update.AssetName) ? "the latest release asset" : update.AssetName;
+            var prompt = update.IsInstaller
+                ? $"Version {update.LatestVersion} is available.\n\nDownload and run {assetText} now?\n\nSteam Controller Bridge will close after the installer starts."
+                : $"Version {update.LatestVersion} is available, but no installer asset was found.\n\nOpen the GitHub release page instead?";
+            var icon = update.IsInstaller ? MessageBoxIcon.Question : MessageBoxIcon.Information;
+            var confirm = MessageBox.Show(this, prompt, Text, MessageBoxButtons.YesNo, icon);
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
+            if (!update.IsInstaller)
+            {
+                GitHubUpdateService.OpenReleasePage(update.ReleaseUrl);
+                return;
+            }
+
+            _checkUpdatesButton.Text = "Downloading...";
+            using var downloadCts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            var progress = new Progress<int>(percent =>
+            {
+                _checkUpdatesButton.Text = $"Downloading {percent}%";
+            });
+            var installerPath = await GitHubUpdateService.DownloadUpdateAsync(update, progress, downloadCts.Token);
+            AppendLog($"{DateTime.Now:HH:mm:ss}  Update downloaded: {installerPath}");
+            GitHubUpdateService.LaunchInstaller(installerPath);
+            AppendLog($"{DateTime.Now:HH:mm:ss}  Installer launched. Closing app for update.");
+            BeginInvoke(Close);
+        }
+        catch (Exception ex)
+        {
+            AppendLog($"{DateTime.Now:HH:mm:ss}  Update check failed: {ex.Message}");
+            MessageBox.Show(this, $"Update check failed.\n\n{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            if (!IsDisposed && !_checkUpdatesButton.IsDisposed)
+            {
+                _checkUpdatesButton.Text = previousText;
+                _checkUpdatesButton.Enabled = true;
+            }
         }
     }
 

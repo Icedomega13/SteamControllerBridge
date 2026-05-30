@@ -1,6 +1,6 @@
-# Steam Controller Bridge v0.10.1
+# Steam Controller Bridge v0.10.3
 
-Focused polish build for calmer, more usable haptics.
+Focused polish build for profile automation, update checks, and smoother haptics.
 
 ## Highlights
 
@@ -11,15 +11,14 @@ Focused polish build for calmer, more usable haptics.
 - Includes experimental DSU/Cemuhook motion output for emulator testing.
 - Includes an Input Test page with live controller state, rumble intensity, test rumble, test chime, and local MIDI haptic playback.
 
-## Changes in 0.10.1
+## Changes in 0.10.3
 
-- Reworked game rumble passthrough so XInput rumble is less harsh on the Steam Controller haptics.
-- Added a softer non-linear rumble curve to preserve subtle effects and tame full-strength spikes.
-- Changed the default rumble intensity from `100%` to `50%`.
-- Changed the rumble slider range to `0-100%`.
-- Added `5%` snapping to the rumble intensity slider.
-- Changed double-click reset on the rumble slider to return to `50%`.
-- Added red/green tray icon status dots for inactive/active bridge state.
+- Added a GitHub update checker on the Logs page.
+- Added profile hooks so saved profiles can automatically apply when selected game/app executables are running.
+- Improved Smart MIDI haptic playback with better channel handling and a gentler `25%` pad melody boost.
+- Refined natural game rumble translation so effects feel less harsh and more game-like.
+- Added the running app version to startup logs for easier support.
+- This release does not include the experimental Game Bar control surface.
 
 ## Requirements
 
@@ -45,5 +44,5 @@ Focused polish build for calmer, more usable haptics.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.10.1.exe`
-- `SteamControllerBridge-win-x64-self-contained-0.10.1.zip`
+- `SteamControllerBridgeSetup-0.10.3.exe`
+- `SteamControllerBridge-0.10.3-win-x64-portable.zip`

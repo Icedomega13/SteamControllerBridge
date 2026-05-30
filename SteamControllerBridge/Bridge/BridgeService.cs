@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Nefarius.ViGEm.Client.Exceptions;
 
 namespace SteamControllerBridge.Bridge;
@@ -30,9 +31,12 @@ internal sealed class BridgeService : IDisposable
     private bool _emergencyShortcutWarned;
     private bool _emergencyShortcutTriggered;
     private CancellationTokenSource? _midiChimeCts;
+    private DateTime _nextProfileHookScanAt = DateTime.MinValue;
+    private string _activeProfileHookKey = string.Empty;
 
     public event EventHandler<BridgeStatus>? StatusChanged;
     public event EventHandler<string>? LogWritten;
+    public event EventHandler<string>? ProfileHookApplied;
 
     public BridgeStatus Status { get; private set; } = BridgeStatus.Idle("Off");
     public BridgeOptions Options { get; private set; } = BridgeOptionsStore.Load();
@@ -196,7 +200,8 @@ internal sealed class BridgeService : IDisposable
             options.AutoStartBridge,
             options.AutoDisableForSteam,
             options.DsuMotionServerEnabled,
-            options.StartupProfileName);
+            options.StartupProfileName,
+            CloneProfileHooks(options.ProfileHooks));
     }
 
     private static void RestoreAppSettings(BridgeOptions options, AppSettings appSettings)
@@ -207,6 +212,20 @@ internal sealed class BridgeService : IDisposable
         options.AutoDisableForSteam = appSettings.AutoDisableForSteam;
         options.DsuMotionServerEnabled = appSettings.DsuMotionServerEnabled;
         options.StartupProfileName = appSettings.StartupProfileName;
+        options.ProfileHooks = CloneProfileHooks(appSettings.ProfileHooks);
+    }
+
+    private static List<ProfileHook> CloneProfileHooks(IEnumerable<ProfileHook> hooks)
+    {
+        return hooks
+            .Where(hook => hook is not null)
+            .Select(hook => new ProfileHook
+            {
+                ExePath = hook.ExePath,
+                ProfileName = hook.ProfileName,
+                Enabled = hook.Enabled
+            })
+            .ToList();
     }
 
     private readonly record struct AppSettings(
@@ -215,10 +234,13 @@ internal sealed class BridgeService : IDisposable
         bool AutoStartBridge,
         bool AutoDisableForSteam,
         bool DsuMotionServerEnabled,
-        string StartupProfileName);
+        string StartupProfileName,
+        IReadOnlyList<ProfileHook> ProfileHooks);
 
     public void TickLifecycle()
     {
+        UpdateProfileHooking();
+
         lock (_gate)
         {
             if (Options.AutoDisableForSteam && Status.IsEnabled && SystemDiagnostics.IsSteamRunning())
@@ -255,6 +277,111 @@ internal sealed class BridgeService : IDisposable
         Start();
     }
 
+    private void UpdateProfileHooking()
+    {
+        if (DateTime.UtcNow < _nextProfileHookScanAt)
+        {
+            return;
+        }
+
+        _nextProfileHookScanAt = DateTime.UtcNow.AddSeconds(2);
+
+        ProfileHook[] hooks;
+        lock (_gate)
+        {
+            Options.Normalize();
+            hooks = Options.ProfileHooks
+                .Where(hook => hook.Enabled && BridgeProfileStore.Exists(hook.ProfileName))
+                .ToArray();
+        }
+
+        if (hooks.Length == 0)
+        {
+            _activeProfileHookKey = string.Empty;
+            return;
+        }
+
+        var match = FindActiveProfileHook(hooks);
+        if (match is null)
+        {
+            _activeProfileHookKey = string.Empty;
+            return;
+        }
+
+        var key = $"{match.ExePath}|{match.ProfileName}";
+        if (string.Equals(key, _activeProfileHookKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        try
+        {
+            LoadOptions(BridgeProfileStore.Load(match.ProfileName));
+            _activeProfileHookKey = key;
+            Log($"Profile hook applied: {match.ProfileName} for {Path.GetFileName(match.ExePath)}");
+            ProfileHookApplied?.Invoke(this, match.ProfileName);
+        }
+        catch (Exception ex)
+        {
+            Log($"Profile hook failed for {Path.GetFileName(match.ExePath)}: {ex.Message}");
+        }
+    }
+
+    private static ProfileHook? FindActiveProfileHook(IEnumerable<ProfileHook> hooks)
+    {
+        var hookList = hooks
+            .Where(hook => !string.IsNullOrWhiteSpace(hook.ExePath))
+            .ToArray();
+        if (hookList.Length == 0)
+        {
+            return null;
+        }
+
+        var hooksByName = hookList
+            .GroupBy(hook => Path.GetFileNameWithoutExtension(hook.ExePath), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var process in Process.GetProcesses())
+        {
+            using (process)
+            {
+                if (!hooksByName.TryGetValue(process.ProcessName, out var candidates))
+                {
+                    continue;
+                }
+
+                var processPath = TryGetProcessPath(process);
+                if (!string.IsNullOrWhiteSpace(processPath))
+                {
+                    var exact = candidates.FirstOrDefault(hook => string.Equals(hook.ExePath, processPath, StringComparison.OrdinalIgnoreCase));
+                    if (exact is not null)
+                    {
+                        return exact;
+                    }
+                }
+
+                if (candidates.Length == 1)
+                {
+                    return candidates[0];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryGetProcessPath(Process process)
+    {
+        try
+        {
+            return process.MainModule?.FileName;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public void Start()
     {
         lock (_gate)
@@ -268,6 +395,7 @@ internal sealed class BridgeService : IDisposable
             _steamBackoffActive = false;
             SetStatus(BridgeStatus.Working("Connecting to Steam Controller..."));
             Log($"Starting bridge. Log file: {BridgeLog.LogPath}");
+            Log($"App version: {typeof(BridgeService).Assembly.GetName().Version?.ToString(3) ?? "unknown"}");
 
             try
             {
@@ -424,6 +552,12 @@ internal sealed class BridgeService : IDisposable
 
             var mode = Options.MidiHapticPlaybackMode;
             Log($"Playing MIDI haptic: {Path.GetFileName(path)} ({mode})");
+            if (mode == MidiHapticPlaybackMode.Smart)
+            {
+                PlaySmartMidiHapticSequence(controller, sequence.Events, token);
+                return;
+            }
+
             DateTime? bassStopAt = null;
             foreach (var ev in sequence.Events)
             {
@@ -453,6 +587,92 @@ internal sealed class BridgeService : IDisposable
             StopAllHapticTones(controller);
             controller.SendRumble(0, 0);
         }
+    }
+
+    private void PlaySmartMidiHapticSequence(
+        SteamControllerDevice controller,
+        IReadOnlyList<MidiHapticEvent> events,
+        CancellationToken token)
+    {
+        DateTime? leftStopAt = null;
+        DateTime? rightStopAt = null;
+        DateTime? bassStopAt = null;
+        var alternateSingleNotes = false;
+
+        for (var i = 0; i < events.Count && !token.IsCancellationRequested; i++)
+        {
+            var ev = events[i];
+            if (ev.DelayMs > 0)
+            {
+                SleepSmartMidiDelay(controller, Math.Min(ev.DelayMs, 4000), ref leftStopAt, ref rightStopAt, ref bassStopAt, token);
+                if (token.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+
+            var group = new List<MidiHapticEvent> { ev };
+            while (i + 1 < events.Count && events[i + 1].DelayMs == 0)
+            {
+                group.Add(events[++i]);
+            }
+
+            var (left, right) = SelectSmartMidiVoices(group, ref alternateSingleNotes);
+            if (left is { } leftNote)
+            {
+                leftStopAt = PlaySmartMidiTone(controller, channel: 1, leftNote);
+                bassStopAt = PlayBassPulse(controller, leftNote, force: false) ?? bassStopAt;
+            }
+
+            if (right is { } rightNote)
+            {
+                rightStopAt = PlaySmartMidiTone(controller, channel: 0, rightNote);
+                bassStopAt = PlayBassPulse(controller, rightNote, force: false) ?? bassStopAt;
+            }
+        }
+
+        StopAllHapticTones(controller);
+        controller.SendRumble(0, 0);
+    }
+
+    private static (MidiHapticEvent? Left, MidiHapticEvent? Right) SelectSmartMidiVoices(
+        IReadOnlyList<MidiHapticEvent> group,
+        ref bool alternateSingleNotes)
+    {
+        if (group.Count == 1)
+        {
+            alternateSingleNotes = !alternateSingleNotes;
+            return alternateSingleNotes ? (group[0], null) : (null, group[0]);
+        }
+
+        var left = BestMidiVoice(group.Where(e => e.Channel == 1), preferLow: true);
+        var right = BestMidiVoice(group.Where(e => e.Channel == 0), preferLow: false);
+        if (left is not null || right is not null)
+        {
+            var remaining = group.Where(e => e.Channel != 0 && e.Channel != 1).ToList();
+            left ??= BestMidiVoice(remaining, preferLow: true);
+            right ??= BestMidiVoice(remaining.Where(e => !ReferenceEquals(e, left)), preferLow: false);
+            return (left, right);
+        }
+
+        left = BestMidiVoice(group, preferLow: true);
+        right = BestMidiVoice(group.Where(e => !ReferenceEquals(e, left)), preferLow: false);
+        return (left, right);
+    }
+
+    private static MidiHapticEvent? BestMidiVoice(IEnumerable<MidiHapticEvent> notes, bool preferLow)
+    {
+        return preferLow
+            ? notes.OrderBy(e => e.Note).ThenByDescending(e => e.Velocity).FirstOrDefault()
+            : notes.OrderByDescending(e => e.Note).ThenByDescending(e => e.Velocity).FirstOrDefault();
+    }
+
+    private static DateTime PlaySmartMidiTone(SteamControllerDevice controller, byte channel, MidiHapticEvent ev)
+    {
+        controller.StopHapticTone(channel);
+        Thread.Sleep(2);
+        controller.PlayHapticTone(channel, ev.Frequency, CalculateSmartPadVelocity(ev));
+        return DateTime.UtcNow.AddMilliseconds(Math.Clamp((int)(ev.DurationMs * 1.15), 45, 720));
     }
 
     private DateTime? PlayMidiHapticEvent(SteamControllerDevice controller, MidiHapticEvent ev, MidiHapticPlaybackMode mode)
@@ -507,6 +727,13 @@ internal sealed class BridgeService : IDisposable
         return (byte)Math.Clamp(185 + (ev.Velocity * 55 / 127) + bassBoost, 170, 255);
     }
 
+    private static byte CalculateSmartPadVelocity(MidiHapticEvent ev)
+    {
+        var boosted = CalculateMidiVelocity(ev) * 1.25;
+        var melodyBoost = ev.Frequency >= 220 ? 10 : 0;
+        return (byte)Math.Clamp((int)Math.Round(boosted) + melodyBoost, 210, 255);
+    }
+
     private static void StopAllHapticTones(SteamControllerDevice? controller)
     {
         if (controller is null)
@@ -551,6 +778,55 @@ internal sealed class BridgeService : IDisposable
         }
 
         return bassStopAt;
+    }
+
+    private static void SleepSmartMidiDelay(
+        SteamControllerDevice controller,
+        int delayMs,
+        ref DateTime? leftStopAt,
+        ref DateTime? rightStopAt,
+        ref DateTime? bassStopAt,
+        CancellationToken token)
+    {
+        var remaining = Math.Max(0, delayMs);
+        while (remaining > 0 && !token.IsCancellationRequested)
+        {
+            var chunk = Math.Min(remaining, 20);
+            chunk = LimitDelayToStopAt(chunk, leftStopAt);
+            chunk = LimitDelayToStopAt(chunk, rightStopAt);
+            chunk = LimitDelayToStopAt(chunk, bassStopAt);
+            Thread.Sleep(Math.Max(1, chunk));
+            remaining -= chunk;
+
+            if (leftStopAt is { } left && DateTime.UtcNow >= left)
+            {
+                controller.StopHapticTone(1);
+                leftStopAt = null;
+            }
+
+            if (rightStopAt is { } right && DateTime.UtcNow >= right)
+            {
+                controller.StopHapticTone(0);
+                rightStopAt = null;
+            }
+
+            if (bassStopAt is { } bass && DateTime.UtcNow >= bass)
+            {
+                controller.SendRumble(0, 0);
+                bassStopAt = null;
+            }
+        }
+    }
+
+    private static int LimitDelayToStopAt(int chunk, DateTime? stopAt)
+    {
+        if (stopAt is not { } target)
+        {
+            return chunk;
+        }
+
+        var untilStop = (int)Math.Ceiling((target - DateTime.UtcNow).TotalMilliseconds);
+        return untilStop <= 0 ? 1 : Math.Min(chunk, untilStop);
     }
 
     private async Task ReadLoop(CancellationToken token)

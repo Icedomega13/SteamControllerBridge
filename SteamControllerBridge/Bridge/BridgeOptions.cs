@@ -51,7 +51,7 @@ internal sealed class BridgeOptions
     public int RumbleIntensityPercent { get; set; } = 50;
     public bool PowerHapticChimeEnabled { get; set; } = true;
     public string MidiHapticFilePath { get; set; } = string.Empty;
-    public MidiHapticPlaybackMode MidiHapticPlaybackMode { get; set; } = MidiHapticPlaybackMode.Simple;
+    public MidiHapticPlaybackMode MidiHapticPlaybackMode { get; set; } = MidiHapticPlaybackMode.Smart;
     public bool DarkModeEnabled { get; set; }
     public bool StartWithWindows { get; set; }
     public bool StartMinimizedToTray { get; set; }
@@ -59,6 +59,7 @@ internal sealed class BridgeOptions
     public bool AutoDisableForSteam { get; set; } = true;
     public bool DsuMotionServerEnabled { get; set; }
     public string StartupProfileName { get; set; } = string.Empty;
+    public List<ProfileHook> ProfileHooks { get; set; } = new();
     public Dictionary<string, int> KeyboardKeys { get; set; } = new();
 
     public void Normalize()
@@ -85,6 +86,21 @@ internal sealed class BridgeOptions
         KeyboardKeys ??= new Dictionary<string, int>();
         StartupProfileName ??= string.Empty;
         MidiHapticFilePath ??= string.Empty;
+        ProfileHooks ??= new List<ProfileHook>();
+        ProfileHooks = ProfileHooks
+            .Where(hook => hook is not null)
+            .Select(hook =>
+            {
+                hook.ExePath = hook.ExePath?.Trim() ?? string.Empty;
+                hook.ProfileName = string.IsNullOrWhiteSpace(hook.ProfileName)
+                    ? string.Empty
+                    : BridgeProfileStore.SanitizeProfileName(hook.ProfileName);
+                return hook;
+            })
+            .Where(hook => !string.IsNullOrWhiteSpace(hook.ExePath) && !string.IsNullOrWhiteSpace(hook.ProfileName))
+            .GroupBy(hook => hook.ExePath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
         TrackpadStickSensitivity = Math.Clamp(TrackpadStickSensitivity, 25, 200);
         TrackpadStickDeadZone = Math.Clamp(TrackpadStickDeadZone, 0, 8000);
         GyroStickSensitivity = Math.Clamp(GyroStickSensitivity, 1, 80);
@@ -241,6 +257,13 @@ internal sealed class BridgeOptions
         binding.Output = output;
         binding.Turbo = false;
     }
+}
+
+internal sealed class ProfileHook
+{
+    public string ExePath { get; set; } = string.Empty;
+    public string ProfileName { get; set; } = string.Empty;
+    public bool Enabled { get; set; } = true;
 }
 
 internal sealed class ButtonBinding
@@ -419,8 +442,9 @@ internal enum GyroOutputMode
 
 internal enum MidiHapticPlaybackMode
 {
-    Simple,
-    Full,
-    PadsOnly,
-    RumbleOnly
+    Simple = 0,
+    Full = 1,
+    PadsOnly = 2,
+    RumbleOnly = 3,
+    Smart = 4
 }

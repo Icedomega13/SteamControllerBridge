@@ -16,7 +16,7 @@ internal sealed class MidiHapticSequence
     }
 }
 
-internal sealed record MidiHapticEvent(int DelayMs, int Channel, ushort Frequency, byte Velocity);
+internal sealed record MidiHapticEvent(int DelayMs, int Channel, int Note, ushort Frequency, byte Velocity, int DurationMs);
 
 internal sealed class MidiReader
 {
@@ -62,7 +62,7 @@ internal sealed class MidiReader
         {
             var delay = Math.Clamp(note.TimeMs - previous, 0, 4000);
             previous = note.TimeMs;
-            events.Add(new MidiHapticEvent(delay, note.Channel, NoteToFrequency(note.Note), note.Velocity));
+            events.Add(new MidiHapticEvent(delay, note.Channel, note.Note, NoteToFrequency(note.Note), note.Velocity, note.DurationMs));
         }
 
         return new MidiHapticSequence(events);
@@ -74,6 +74,7 @@ internal sealed class MidiReader
         var length = ReadInt32();
         var end = Math.Min(_data.Length, _position + length);
         var notes = new List<TimedMidiNote>();
+        var activeNotes = new Dictionary<(int Channel, int Note), Queue<ActiveMidiNote>>();
         var absoluteTicks = 0;
         var tempoMicros = 500_000;
         var runningStatus = 0;
@@ -148,12 +149,55 @@ internal sealed class MidiReader
             var second = ReadByte();
             if (command == 0x90 && second > 0)
             {
-                notes.Add(new TimedMidiNote(absoluteTicks, absoluteMs, channel, first, (byte)Math.Clamp(second, 1, 127)));
+                var key = (channel, first);
+                if (!activeNotes.TryGetValue(key, out var queue))
+                {
+                    queue = new Queue<ActiveMidiNote>();
+                    activeNotes[key] = queue;
+                }
+
+                queue.Enqueue(new ActiveMidiNote(absoluteTicks, absoluteMs, (byte)Math.Clamp(second, 1, 127)));
+            }
+            else if (command == 0x80 || command == 0x90)
+            {
+                CloseActiveNote(activeNotes, notes, channel, first, absoluteTicks, absoluteMs);
+            }
+        }
+
+        foreach (var pair in activeNotes)
+        {
+            while (pair.Value.Count > 0)
+            {
+                CloseActiveNote(activeNotes, notes, pair.Key.Channel, pair.Key.Note, absoluteTicks, absoluteMs);
             }
         }
 
         _position = end;
         return notes;
+    }
+
+    private static void CloseActiveNote(
+        Dictionary<(int Channel, int Note), Queue<ActiveMidiNote>> activeNotes,
+        List<TimedMidiNote> notes,
+        int channel,
+        int note,
+        int endTick,
+        int endMs)
+    {
+        var key = (channel, note);
+        if (!activeNotes.TryGetValue(key, out var queue) || queue.Count == 0)
+        {
+            return;
+        }
+
+        var started = queue.Dequeue();
+        notes.Add(new TimedMidiNote(
+            started.Tick,
+            started.TimeMs,
+            Math.Max(started.TimeMs + 30, endMs),
+            channel,
+            note,
+            started.Velocity));
     }
 
     private static ushort NoteToFrequency(int note)
@@ -209,5 +253,10 @@ internal sealed class MidiReader
         return _data[_position++];
     }
 
-    private sealed record TimedMidiNote(int Tick, int TimeMs, int Channel, int Note, byte Velocity);
+    private sealed record ActiveMidiNote(int Tick, int TimeMs, byte Velocity);
+
+    private sealed record TimedMidiNote(int Tick, int TimeMs, int EndMs, int Channel, int Note, byte Velocity)
+    {
+        public int DurationMs => Math.Max(30, EndMs - TimeMs);
+    }
 }

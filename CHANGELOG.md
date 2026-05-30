@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.10.3
+
+- Added a GitHub update checker on the Logs page that can download and launch the latest installer.
+- Added profile hooks so saved profiles can auto-apply when a chosen game or app executable is running.
+- Improved Smart MIDI haptic playback with better channel handling and a gentler `25%` pad melody boost.
+- Refined natural game rumble translation so XInput rumble feels less harsh while preserving subtle effects.
+- Added the running app version to startup logs.
+- Left the experimental Game Bar control surface out of this release.
+
 ## 0.10.1
 
 - Reworked Xbox rumble passthrough with a softer non-linear response curve for less aggressive game rumble.
