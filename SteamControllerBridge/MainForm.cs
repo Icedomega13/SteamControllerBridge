@@ -162,6 +162,7 @@ internal sealed class MainForm : Form
         _bridge.StatusChanged += (_, status) => OnUi(() => ApplyStatus(status));
         _bridge.LogWritten += (_, line) => OnUi(() => AppendLog(line));
         _bridge.ProfileHookApplied += (_, profileName) => OnUi(() => ApplyProfileHookToUi(profileName));
+        _bridge.OptionsChangedExternally += (_, _) => OnUi(LoadOptionsIntoUi);
         FormClosing += (_, _) =>
         {
             _bridge.Dispose();

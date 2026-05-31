@@ -6,6 +6,8 @@ namespace SteamControllerBridge.Bridge;
 internal sealed class BridgeService : IDisposable
 {
     private const int MaxSteamControllerRumbleByte = 150;
+    private const int RumbleStaleFadeStartMs = 300;
+    private const int RumbleStaleStopMs = 1500;
     private readonly object _gate = new();
     private CancellationTokenSource? _readLoopCts;
     private Task? _readLoopTask;
@@ -16,11 +18,14 @@ internal sealed class BridgeService : IDisposable
     private readonly KeyboardEmulator _keyboard = new();
     private readonly FpsInputEmulator _fpsInput = new();
     private readonly DsuMotionServer _dsuMotionServer;
+    private readonly LocalControlServer _localControlServer;
+    private readonly LocalControlHttpServer _localControlHttpServer;
     private readonly object _rumbleGate = new();
     private byte _rumbleSmall;
     private byte _rumbleLarge;
     private byte _lastSentRumbleSmall;
     private byte _lastSentRumbleLarge;
+    private DateTime _lastRumbleFeedbackAt = DateTime.MinValue;
     private DateTime _nextRumbleAt = DateTime.MinValue;
     private DateTime _nextReconnectAt = DateTime.MinValue;
     private bool _userWantsEnabled;
@@ -37,6 +42,7 @@ internal sealed class BridgeService : IDisposable
     public event EventHandler<BridgeStatus>? StatusChanged;
     public event EventHandler<string>? LogWritten;
     public event EventHandler<string>? ProfileHookApplied;
+    public event EventHandler? OptionsChangedExternally;
 
     public BridgeStatus Status { get; private set; } = BridgeStatus.Idle("Off");
     public BridgeOptions Options { get; private set; } = BridgeOptionsStore.Load();
@@ -45,10 +51,14 @@ internal sealed class BridgeService : IDisposable
     public BridgeService()
     {
         _dsuMotionServer = new DsuMotionServer(Log);
+        _localControlServer = new LocalControlServer(this, Log);
+        _localControlHttpServer = new LocalControlHttpServer(this, Log);
         _keyboard.LogWritten += (_, message) => Log(message);
         _fpsInput.LogWritten += (_, message) => Log(message);
         LoadStartupProfileIfConfigured();
         SyncDsuMotionServer();
+        _localControlServer.Start();
+        _localControlHttpServer.Start();
     }
 
     public void SaveOptions()
@@ -468,6 +478,66 @@ internal sealed class BridgeService : IDisposable
         {
             StopInternal(userRequested: true, restoreLizard: true);
         }
+    }
+
+    public LocalControlSnapshot GetLocalControlSnapshot()
+    {
+        lock (_gate)
+        {
+            Options.Normalize();
+            return new LocalControlSnapshot(
+                Status.IsEnabled,
+                Status.IsWorking,
+                Status.HasError,
+                Status.Message,
+                Options.RumbleEnabled,
+                Options.RumbleIntensityPercent,
+                Options.MapL4.Output.ToString(),
+                Options.MapL5.Output.ToString(),
+                Options.MapR4.Output.ToString(),
+                Options.MapR5.Output.ToString());
+        }
+    }
+
+    public LocalControlSnapshot SetLocalRumbleIntensity(int percent)
+    {
+        lock (_gate)
+        {
+            Options.RumbleIntensityPercent = Math.Clamp(SnapPercent(percent), 0, 100);
+            SaveOptions();
+            OptionsChangedExternally?.Invoke(this, EventArgs.Empty);
+            return GetLocalControlSnapshot();
+        }
+    }
+
+    public LocalControlSnapshot SetLocalPaddleMapping(string paddle, string output)
+    {
+        lock (_gate)
+        {
+            if (!Enum.TryParse<GamepadButton>(output, ignoreCase: true, out var button))
+            {
+                throw new ArgumentException($"Unknown gamepad button '{output}'.");
+            }
+
+            var binding = paddle.Trim().ToUpperInvariant() switch
+            {
+                "L4" => Options.MapL4,
+                "L5" => Options.MapL5,
+                "R4" => Options.MapR4,
+                "R5" => Options.MapR5,
+                _ => throw new ArgumentException($"Unknown paddle '{paddle}'.")
+            };
+
+            binding.Output = button;
+            SaveOptions();
+            OptionsChangedExternally?.Invoke(this, EventArgs.Empty);
+            return GetLocalControlSnapshot();
+        }
+    }
+
+    private static int SnapPercent(int value)
+    {
+        return (int)Math.Round(Math.Clamp(value, 0, 100) / 5.0) * 5;
     }
 
     private void StopInternal(bool userRequested, bool restoreLizard)
@@ -1074,13 +1144,16 @@ internal sealed class BridgeService : IDisposable
 
     private void OnRumbleReceived(object? sender, XboxRumbleEventArgs e)
     {
+        var now = DateTime.UtcNow;
+        var hasRumble = e.SmallMotor != 0 || e.LargeMotor != 0;
         lock (_rumbleGate)
         {
             _rumbleSmall = Options.RumbleEnabled ? e.SmallMotor : (byte)0;
             _rumbleLarge = Options.RumbleEnabled ? e.LargeMotor : (byte)0;
+            _lastRumbleFeedbackAt = hasRumble && Options.RumbleEnabled ? now : DateTime.MinValue;
         }
 
-        if (!Options.RumbleEnabled || Options.RumbleIntensityPercent <= 0 || e.SmallMotor == 0 && e.LargeMotor == 0)
+        if (!Options.RumbleEnabled || Options.RumbleIntensityPercent <= 0 || !hasRumble)
         {
             StopRumble();
         }
@@ -1096,10 +1169,12 @@ internal sealed class BridgeService : IDisposable
 
         byte small;
         byte large;
+        DateTime lastFeedbackAt;
         lock (_rumbleGate)
         {
             small = _rumbleSmall;
             large = _rumbleLarge;
+            lastFeedbackAt = _lastRumbleFeedbackAt;
         }
 
         if (small == 0 && large == 0)
@@ -1114,6 +1189,19 @@ internal sealed class BridgeService : IDisposable
 
         var scaledSmall = ScaleRumble(small);
         var scaledLarge = ScaleRumble(large);
+        var staleScale = GetRumbleFreshnessScale(lastFeedbackAt);
+        if (staleScale <= 0)
+        {
+            StopRumble();
+            return;
+        }
+
+        if (staleScale < 1)
+        {
+            scaledSmall = (byte)Math.Clamp((int)Math.Round(scaledSmall * staleScale), 0, byte.MaxValue);
+            scaledLarge = (byte)Math.Clamp((int)Math.Round(scaledLarge * staleScale), 0, byte.MaxValue);
+        }
+
         if (scaledSmall == 0 && scaledLarge == 0)
         {
             StopRumble();
@@ -1140,12 +1228,34 @@ internal sealed class BridgeService : IDisposable
         return (byte)Math.Clamp(scaled, 0, byte.MaxValue);
     }
 
+    private static double GetRumbleFreshnessScale(DateTime lastFeedbackAt)
+    {
+        if (lastFeedbackAt == DateTime.MinValue)
+        {
+            return 0;
+        }
+
+        var ageMs = (DateTime.UtcNow - lastFeedbackAt).TotalMilliseconds;
+        if (ageMs <= RumbleStaleFadeStartMs)
+        {
+            return 1;
+        }
+
+        if (ageMs >= RumbleStaleStopMs)
+        {
+            return 0;
+        }
+
+        return 1 - ((ageMs - RumbleStaleFadeStartMs) / (RumbleStaleStopMs - RumbleStaleFadeStartMs));
+    }
+
     private void StopRumble()
     {
         lock (_rumbleGate)
         {
             _rumbleSmall = 0;
             _rumbleLarge = 0;
+            _lastRumbleFeedbackAt = DateTime.MinValue;
         }
 
         if (_lastSentRumbleSmall == 0 && _lastSentRumbleLarge == 0)
@@ -1182,6 +1292,20 @@ internal sealed class BridgeService : IDisposable
         _keyboard.Reset();
         _fpsInput.Reset();
         StopMidiHaptic();
+        _localControlServer.Dispose();
+        _localControlHttpServer.Dispose();
         _dsuMotionServer.Dispose();
     }
 }
+
+internal sealed record LocalControlSnapshot(
+    bool IsEnabled,
+    bool IsWorking,
+    bool HasError,
+    string Message,
+    bool RumbleEnabled,
+    int RumbleIntensityPercent,
+    string L4,
+    string L5,
+    string R4,
+    string R5);

@@ -16,7 +16,7 @@ The app is useful today, but it is still community test software. Expect some ro
 
 1. Download the latest release from the GitHub Releases page.
 2. Install ViGEmBus if you do not already have it.
-3. Run `SteamControllerBridgeSetup-0.10.3.exe`, or extract the portable ZIP.
+3. Run `SteamControllerBridgeSetup-0.10.4.exe`, or extract the portable ZIP.
 4. Close Steam before turning the bridge on.
 5. Connect the Steam Controller by USB or the Steam Controller Puck.
 6. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
@@ -52,6 +52,8 @@ The installer does not install ViGEmBus automatically. If ViGEmBus is missing, t
 - Optional haptic power chime when the bridge turns on or off
 - Rumble intensity slider with test rumble and test chime controls
 - Local MIDI haptic chime player for user-provided MIDI files
+- Hold Start + Back for 5 seconds to turn the bridge off from the controller
+- Xbox Game Bar widget for quick bridge toggle, connection status, rumble intensity, and back paddle remaps
 - Right-stick mouse speed and vertical invert controls
 - Keyboard key mapping for controller buttons, triggers, pad clicks, and back paddles
 - Universal turbo speed control and trigger turbo toggles

@@ -1,0 +1,12 @@
+<Application
+    x:Class="SteamControllerBridge.GameBarWidget.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    RequestedTheme="Dark">
+    <Application.Resources>
+        <SolidColorBrush x:Key="BridgeBackBrush" Color="#07111f" />
+        <SolidColorBrush x:Key="BridgePanelBrush" Color="#15263d" />
+        <SolidColorBrush x:Key="BridgeAccentBrush" Color="#5bf4b7" />
+        <SolidColorBrush x:Key="BridgeSoftBrush" Color="#bfd0e3" />
+    </Application.Resources>
+</Application>

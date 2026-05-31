@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.10.4
+
+- Added a real Xbox Game Bar widget with bridge on/off, connection state, rumble intensity, and L4/L5/R4/R5 remapping.
+- Added local control hooks used by the Game Bar widget and external tools.
+- Added controller-friendly widget rumble controls with 5% step buttons.
+- Improved live sync so widget changes update the running bridge state.
+- Added startup bridge support for users who want Xbox mode ready after Windows login.
+- Added the Start + Back 5-second controller shortcut to the public feature list.
+- Kept the refined natural haptics work from the 0.10.4 prototypes.
+
 ## 0.10.3
 
 - Added a GitHub update checker on the Logs page that can download and launch the latest installer.

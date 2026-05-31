@@ -1,6 +1,6 @@
-# Steam Controller Bridge v0.10.3
+# Steam Controller Bridge v0.10.4
 
-Focused polish build for profile automation, update checks, and smoother haptics.
+Game Bar widget build with controller-friendly quick controls and the latest haptic refinements.
 
 ## Highlights
 
@@ -10,15 +10,17 @@ Focused polish build for profile automation, update checks, and smoother haptics
 - Includes mouse/gyro tools, Old School FPS mode, trackpad-as-mouse, and trackpad-as-stick mode.
 - Includes experimental DSU/Cemuhook motion output for emulator testing.
 - Includes an Input Test page with live controller state, rumble intensity, test rumble, test chime, and local MIDI haptic playback.
+- Includes an Xbox Game Bar widget for quick in-game access to bridge power, connection state, rumble intensity, and back paddle remaps.
 
-## Changes in 0.10.3
+## Changes in 0.10.4
 
-- Added a GitHub update checker on the Logs page.
-- Added profile hooks so saved profiles can automatically apply when selected game/app executables are running.
-- Improved Smart MIDI haptic playback with better channel handling and a gentler `25%` pad melody boost.
-- Refined natural game rumble translation so effects feel less harsh and more game-like.
-- Added the running app version to startup logs for easier support.
-- This release does not include the experimental Game Bar control surface.
+- Added the first real Xbox Game Bar widget.
+- Added bridge on/off, subtle connection status, rumble intensity, and L4/L5/R4/R5 remapping to the widget.
+- Added local control hooks so the widget can talk to the running bridge.
+- Added controller-friendly rumble step controls in the widget.
+- Added Start + Back hold-for-5-seconds controller shutdown to the public feature list.
+- Added startup bridge support for users who want the controller to enter Xbox mode automatically.
+- Kept the smoother natural rumble translation and Smart MIDI haptic playback improvements.
 
 ## Requirements
 
@@ -34,6 +36,8 @@ Focused polish build for profile automation, update checks, and smoother haptics
 4. Connect the controller.
 5. Open Steam Controller Bridge and click the controller icon in the upper-left corner.
 
+To use the optional Game Bar widget, install the widget package from the release assets, run Steam Controller Bridge, then open Xbox Game Bar and add the Steam Controller Bridge widget.
+
 ## Known Limitations
 
 - ViGEmBus is retired and is used here as a practical MVP backend.
@@ -41,8 +45,10 @@ Focused polish build for profile automation, update checks, and smoother haptics
 - HidHide duplicate-device handling is not integrated.
 - Remapping is currently global rather than per-game.
 - Haptic behavior is still best-effort and may need more game-by-game tuning.
+- The Xbox Game Bar widget is new and may need additional polishing on some display scales.
 
 ## Release Assets
 
-- `SteamControllerBridgeSetup-0.10.3.exe`
-- `SteamControllerBridge-0.10.3-win-x64-portable.zip`
+- `SteamControllerBridgeSetup-0.10.4.exe`
+- `SteamControllerBridge-0.10.4-win-x64-portable.zip`
+- `SteamControllerBridge.GameBarWidget-0.10.4.2-msix.zip`

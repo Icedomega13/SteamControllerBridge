@@ -1,0 +1,20 @@
+<Page
+    x:Class="SteamControllerBridge.GameBarWidget.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{StaticResource BridgeBackBrush}">
+    <Grid Padding="24">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+            <TextBlock
+                FontSize="22"
+                FontWeight="SemiBold"
+                Foreground="White"
+                Text="Steam Controller Bridge Widget" />
+            <TextBlock
+                Foreground="{StaticResource BridgeSoftBrush}"
+                Text="Open Xbox Game Bar and launch the widget from the widgets menu."
+                TextAlignment="Center"
+                TextWrapping="WrapWholeWords" />
+        </StackPanel>
+    </Grid>
+</Page>

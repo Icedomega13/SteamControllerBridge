@@ -4,6 +4,7 @@ obj/
 publish/
 dist/
 artifacts/
+AppPackages/
 
 # User and IDE state
 .vs/
